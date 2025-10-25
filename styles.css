@@ -8,11 +8,11 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
-    padding: 20px;
+    padding: 16px;
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 1100px;
     margin: 0 auto;
     background: white;
     border-radius: 15px;
@@ -86,13 +86,13 @@ header h1 {
 
 .simulation-wrapper {
     display: flex;
-    gap: 20px;
-    padding: 30px;
-    align-items: flex-start;
+    gap: 18px;
+    padding: 24px;
+    align-items: stretch;
 }
 
 .info-panel {
-    flex: 0 0 300px;
+    flex: 0 0 260px;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -109,13 +109,19 @@ header h1 {
     line-height: 1.6;
 }
 
+.panel-note {
+    color: #777;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
 .controls {
     background: #f9f9f9;
-    padding: 20px;
+    padding: 18px;
     border-radius: 8px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
 }
 
 .controls label {
@@ -165,7 +171,7 @@ canvas {
     border-radius: 8px;
     cursor: crosshair;
     background: #fafafa;
-    max-width: 800px;
+    max-width: 760px;
 }
 
 canvas:active {
@@ -212,8 +218,8 @@ canvas:active {
 
 .physics-explanation {
     background: #f8f9fa;
-    padding: 30px;
-    margin: 0 30px 30px 30px;
+    padding: 24px;
+    margin: 0 24px 24px 24px;
     border-radius: 8px;
     border-top: 4px solid #667eea;
 }
@@ -227,8 +233,8 @@ canvas:active {
 }
 
 .explanation-section {
-    margin: 25px 0;
-    padding: 20px;
+    margin: 20px 0;
+    padding: 18px;
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);

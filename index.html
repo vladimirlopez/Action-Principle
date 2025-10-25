@@ -107,16 +107,6 @@
                             <span id="numPathsValue">30</span>
                         </label>
                         <label>
-                            Total Time T (s):
-                            <input type="range" id="totalTime" min="0.5" max="2.5" step="0.1" value="1.2">
-                            <span id="totalTimeValue">1.2</span>
-                        </label>
-                        <label>
-                            Effective ℏ:
-                            <input type="range" id="hbarEff" min="0.1" max="2.0" step="0.1" value="0.5">
-                            <span id="hbarEffValue">0.5</span>
-                        </label>
-                        <label>
                             Gravity (m/s²):
                             <input type="range" id="gravity" min="5" max="15" step="0.5" value="9.8">
                             <span id="gravityValue">9.8</span>
@@ -139,14 +129,15 @@
                         <p>Flight Time: <span id="flightTime">0.00</span> s</p>
                         <p>Phasor Sum |Σ|: <span id="phasorMagnitude">0.00</span></p>
                     </div>
+                    <p class="panel-note">Flight time is computed automatically from the hoop position—no manual timing knob needed.</p>
                     <div class="guided-practice">
                         <h3>🎯 Guided Practice</h3>
                         <ol>
                             <li><strong>Spray Mode:</strong> See many possible paths. Classical path glows green.</li>
-                            <li><strong>Watch phasors:</strong> Paths add as vectors. Only near-classical paths align!</li>
-                            <li><strong>Adjust ℏ:</strong> Lower = sharper classical dominance.</li>
-                            <li><strong>Neighborhood Mode:</strong> See how paths near classical add constructively.</li>
-                            <li><strong>Drag the hoop:</strong> Watch how the classical path adapts.</li>
+                            <li><strong>Watch phasors:</strong> Paths add as vectors. Only near-classical arcs align.</li>
+                            <li><strong>Neighborhood Mode:</strong> Zoom in on subtle variations around the winner.</li>
+                            <li><strong>Heatmap Mode:</strong> Map the action landscape across control points.</li>
+                            <li><strong>Drag the hoop:</strong> The flight time re-computes automatically to match.</li>
                         </ol>
                     </div>
                 </div>
@@ -167,7 +158,7 @@
 
                 <div class="explanation-section">
                     <h4>Interference Picture</h4>
-                    <p>Each path contributes a phasor of length 1 pointing at angle S/ℏ. Near the classical track the phases line up, so the sum arrow grows. Far away they whirl around and cancel.</p>
+                    <p>Each path contributes a unit phasor rotated by its action difference ΔS relative to the classical arc. When ΔS is tiny the arrows line up and reinforce; otherwise they whirl around and cancel.</p>
                 </div>
 
                 <div class="explanation-section">
@@ -177,7 +168,7 @@
                         <li><strong>Neighborhood:</strong> tight bundle near the classical curve.</li>
                         <li><strong>Heatmap:</strong> structured grid to map the action landscape.</li>
                     </ul>
-                    <p>Lower ℏ_eff to mimic the classical limit where only the stationary path survives.</p>
+                    <p>Toggle the phasor overlay to watch how constructive addition fades as the action drifts away from the stationary curve.</p>
                 </div>
             </div>
         </div>

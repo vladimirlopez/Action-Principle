@@ -15,8 +15,8 @@ class MechanicsSimulation {
         // Physics parameters
         this.gravity = 9.8;
         this.mass = 0.6; // kg
-        this.totalTime = 1.2; // seconds (fixed duration - Hamilton's principle)
-        this.hbarEff = 0.5; // Effective ℏ for phase scaling
+    this.totalTime = 1.2; // seconds, recalculated from geometry each update
+    this.phaseScale = 1; // Action spread scaling for phasor visualization
         this.numSegments = 50; // Path discretization
         this.pixelScale = 50; // pixels per meter for physics conversions
         
@@ -54,23 +54,6 @@ class MechanicsSimulation {
                 this.gravity = parseFloat(e.target.value);
                 document.getElementById('gravityValue').textContent = e.target.value;
                 this.generatePaths();
-            });
-        }
-
-        const totalTimeEl = document.getElementById('totalTime');
-        if (totalTimeEl) {
-            totalTimeEl.addEventListener('input', (e) => {
-                this.totalTime = parseFloat(e.target.value);
-                document.getElementById('totalTimeValue').textContent = e.target.value;
-                this.generatePaths();
-            });
-        }
-
-        const hbarEffEl = document.getElementById('hbarEff');
-        if (hbarEffEl) {
-            hbarEffEl.addEventListener('input', (e) => {
-                this.hbarEff = parseFloat(e.target.value);
-                document.getElementById('hbarEffValue').textContent = e.target.value;
             });
         }
 
@@ -178,6 +161,19 @@ class MechanicsSimulation {
         return points;
     }
 
+    estimateFlightTime(x0, y0, xT, yT) {
+        const dx = xT - x0;
+        const dy = yT - y0;
+        const distanceSq = dx * dx + dy * dy;
+        if (distanceSq < 1e-6) {
+            return 0.8;
+        }
+
+        const rawTime = Math.pow((4 * distanceSq) / (this.gravity * this.gravity), 0.25);
+        const clampedTime = Math.min(Math.max(rawTime, 0.6), 2.5);
+        return clampedTime;
+    }
+
     // Calculate action for a given path
     calculateAction(points) {
         const dt = this.totalTime / (points.length - 1);
@@ -212,15 +208,18 @@ class MechanicsSimulation {
 
     // Find classical path using parabola
     findClassicalPath() {
-        const scale = this.pixelScale;
-        const canvasHeight = this.canvas.height;
-        const T = this.totalTime;
+    const scale = this.pixelScale;
+    const canvasHeight = this.canvas.height;
 
         // Convert endpoints to physical coordinates (meters)
         const x0 = this.startPoint.x / scale;
         const y0 = (canvasHeight - this.startPoint.y) / scale;
         const xT = this.target.x / scale;
         const yT = (canvasHeight - this.target.y) / scale;
+
+    // Choose the flight time that minimizes launch speed for the given geometry
+    const T = this.estimateFlightTime(x0, y0, xT, yT);
+    this.totalTime = T;
 
         // Solve constant-acceleration equations for fixed time T
         const vx0 = (xT - x0) / T;
@@ -241,7 +240,7 @@ class MechanicsSimulation {
         return {
             points,
             action,
-            phase: action / this.hbarEff,
+            phase: 0,
             isClassical: true
         };
     }
@@ -308,9 +307,8 @@ class MechanicsSimulation {
                 const { c1, c2 } = this.generateRandomControlPoints();
                 const points = this.resampleBezierPath(this.startPoint, c1, c2, this.target, this.numSegments);
                 const action = this.calculateAction(points);
-                const phase = action / this.hbarEff;
                 
-                this.paths.push({ points, action, phase, c1, c2 });
+                this.paths.push({ points, action, c1, c2 });
             }
         } else if (this.mode === 'neighborhood') {
             // Generate paths near classical path
@@ -319,9 +317,8 @@ class MechanicsSimulation {
                 const { c1, c2 } = this.generateNearbyControlPoints(sigma);
                 const points = this.resampleBezierPath(this.startPoint, c1, c2, this.target, this.numSegments);
                 const action = this.calculateAction(points);
-                const phase = action / this.hbarEff;
                 
-                this.paths.push({ points, action, phase, c1, c2, deviation: sigma });
+                this.paths.push({ points, action, c1, c2, deviation: sigma });
             }
         } else if (this.mode === 'heatmap') {
             // Generate grid of paths
@@ -342,15 +339,40 @@ class MechanicsSimulation {
                     
                     const points = this.resampleBezierPath(this.startPoint, c1, c2, this.target, this.numSegments);
                     const action = this.calculateAction(points);
-                    const phase = action / this.hbarEff;
                     
-                    this.paths.push({ points, action, phase, c1, c2, gridI: i, gridJ: j });
+                    this.paths.push({ points, action, c1, c2, gridI: i, gridJ: j });
                 }
             }
         }
         
         // Sort by action for easier identification
         this.paths.sort((a, b) => a.action - b.action);
+
+        // Scale phases based on action spread so phasor diagram remains informative
+        if (this.classicalPath) {
+            const classicalAction = this.classicalPath.action;
+            let minAction = classicalAction;
+            let maxAction = classicalAction;
+
+            for (const path of this.paths) {
+                minAction = Math.min(minAction, path.action);
+                maxAction = Math.max(maxAction, path.action);
+            }
+
+            const spread = maxAction - minAction;
+            this.phaseScale = spread > 0 ? spread / (Math.PI * 1.5) : 1;
+            if (!isFinite(this.phaseScale) || this.phaseScale === 0) {
+                this.phaseScale = 1;
+            }
+
+            for (const path of this.paths) {
+                path.phase = (path.action - classicalAction) / this.phaseScale;
+            }
+
+            this.classicalPath.phase = 0;
+        } else {
+            this.phaseScale = 1;
+        }
     }
 
     // Calculate phasor sum
@@ -559,26 +581,31 @@ class MechanicsSimulation {
         
         // Draw individual phasors (sample some to avoid clutter)
         const sampleSize = Math.min(15, this.paths.length);
-        const step = Math.max(1, Math.floor(this.paths.length / sampleSize));
+        const step = sampleSize > 0 ? Math.max(1, Math.floor(this.paths.length / sampleSize)) : 1;
         
         let re = 0, im = 0;
         
-        for (let i = 0; i < this.paths.length; i += step) {
-            const path = this.paths[i];
-            const arrowLen = 15;
-            const arrowX = phasorX + arrowLen * Math.cos(path.phase);
-            const arrowY = phasorY + arrowLen * Math.sin(path.phase);
-            
-            ctx.strokeStyle = 'rgba(200, 100, 100, 0.4)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(phasorX + re * 15, phasorY + im * 15);
-            ctx.lineTo(phasorX + re * 15 + arrowLen * Math.cos(path.phase), 
-                       phasorY + im * 15 + arrowLen * Math.sin(path.phase));
-            ctx.stroke();
-            
-            re += Math.cos(path.phase);
-            im += Math.sin(path.phase);
+        if (sampleSize > 0) {
+            for (let i = 0; i < this.paths.length; i += step) {
+                const path = this.paths[i];
+                const arrowLen = 15;
+                
+                ctx.strokeStyle = 'rgba(200, 100, 100, 0.4)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(phasorX + re * 15, phasorY + im * 15);
+                ctx.lineTo(phasorX + re * 15 + arrowLen * Math.cos(path.phase), 
+                           phasorY + im * 15 + arrowLen * Math.sin(path.phase));
+                ctx.stroke();
+                
+                re += Math.cos(path.phase);
+                im += Math.sin(path.phase);
+            }
+        }
+
+        if (this.classicalPath) {
+            re += Math.cos(this.classicalPath.phase);
+            im += Math.sin(this.classicalPath.phase);
         }
         
         // Draw sum vector
@@ -609,8 +636,8 @@ class MechanicsSimulation {
         // Label
         ctx.fillStyle = '#2e7d32';
         ctx.font = '10px Arial';
-        ctx.fillText('∑ e^(iS/ℏ)', phasorX - 30, phasorY + 80);
-        ctx.fillText(`|Σ| = ${sumLen.toFixed(1)}`, phasorX - 30, phasorY + 95);
+        ctx.fillText('Phasor Sum', phasorX - 35, phasorY + 80);
+        ctx.fillText(`|Sum| = ${sumLen.toFixed(1)}`, phasorX - 35, phasorY + 95);
     }
 
     start() {
