@@ -10,7 +10,7 @@
     <div class="container">
         <header>
             <h1>Visualizing the Principle of Least Action</h1>
-            <p class="subtitle">Explore how nature "chooses" paths across optics, classical mechanics, and quantum physics</p>
+            <p class="subtitle">Explore how nature "chooses" paths in optics, classical mechanics, and quantum interference</p>
         </header>
 
         <div class="tabs">
@@ -56,55 +56,33 @@
                 <canvas id="fermatCanvas" width="800" height="600"></canvas>
             </div>
             <div class="physics-explanation">
-                <h3>📚 Physics Explanation: Fermat's Principle</h3>
-                
+                <h3>📚 Fermat in a Nutshell</h3>
+
                 <div class="explanation-section">
-                    <h4>The Principle of Least Time</h4>
-                    <p>Fermat's Principle states that light traveling between two points follows the path that takes the <strong>minimum time</strong> (or more precisely, stationary time). This elegant principle explains both reflection and refraction.</p>
-                    
-                    <div class="formula">
-                        <strong>Travel Time:</strong> T = d₁/v₁ + d₂/v₂
-                    </div>
-                    
-                    <p>where d₁ and d₂ are path segments, and v₁ and v₂ are light speeds in each medium.</p>
+                    <h4>Key Idea</h4>
+                    <ul class="compact-list">
+                        <li>Light chooses the path that makes travel time stationary.</li>
+                        <li>Drag the refraction point to sweep through every candidate path.</li>
+                        <li>The green curve marks the minimum of the time graph.</li>
+                    </ul>
+                    <div class="formula">Travel Time: T = d₁/v₁ + d₂/v₂</div>
                 </div>
 
                 <div class="explanation-section">
-                    <h4>Snell's Law from Least Time</h4>
-                    <p>For refraction between two media with refractive indices n₁ and n₂, Fermat's principle leads directly to <strong>Snell's Law</strong>:</p>
-                    
-                    <div class="formula">
-                        <strong>Snell's Law:</strong> n₁ sin(θ₁) = n₂ sin(θ₂)
-                    </div>
-                    
-                    <p>In the simulation, the <span class="highlight-green">green dashed path</span> shows this optimal route. When you drag the refraction point to minimize travel time, Snell's Law is automatically satisfied! The <span class="highlight-red">red paths</span> show suboptimal alternatives.</p>
-                    
-                    <p>The travel time graph at the bottom shows T(x) for all possible refraction points. Notice how it has a smooth minimum—this is where ∂T/∂x = 0, which mathematically derives Snell's Law.</p>
+                    <h4>Snell's Law Appears Automatically</h4>
+                    <p>At the optimum we have ∂T/∂x = 0, which gives the familiar relation</p>
+                    <div class="formula"><strong>Snell's Law:</strong> n₁ sin θ₁ = n₂ sin θ₂</div>
+                    <p>The angle readouts update live, confirming that the minimum-time path also satisfies Snell.</p>
                 </div>
 
                 <div class="explanation-section">
-                    <h4>Wave Interpretation: Huygens' Principle</h4>
-                    <p>When you enable wavefronts, you see the wave nature of light. Circular wavefronts expand from the source in air (at speed c/n₁). According to <strong>Huygens' principle</strong>, each point on a wavefront acts as a source of secondary wavelets.</p>
-                    
-                    <p>When the wavefront crosses into water, it slows down (speed becomes c/n₂), causing the wavefronts to bend—this is refraction! The refracted wavelets demonstrate why only the least-time path carries energy: wavefronts from other paths arrive at different times and cancel due to destructive interference.</p>
+                    <h4>Wavefront View</h4>
+                    <p>Toggle wavefronts to see Huygens' picture: wavelets slow down in the denser medium, bending the front so that only the least-time route adds constructively.</p>
                 </div>
 
                 <div class="explanation-section">
-                    <h4>Connection to Action Principle</h4>
-                    <p>Fermat's principle is actually a special case of the <strong>Principle of Least Action</strong>. For light, the "action" is proportional to travel time (or optical path length n·d). This connects geometrical optics to the fundamental action principle that governs all of physics.</p>
-                    
-                    <div class="formula">
-                        Optical Path Length: S = ∫ n(s) ds
-                    </div>
-                    
-                    <p>Nature extremizes this quantity, leading to Snell's law for refraction and the law of reflection.</p>
-                </div>
-
-                <div class="explanation-section">
-                    <h4>Feynman's Path Integral View</h4>
-                    <p>Richard Feynman showed that we can think of light as "trying all possible paths" simultaneously. Each path contributes a quantum amplitude with a phase φ = 2πL/λ. Paths far from the optimal one have rapidly varying phases that cancel out, while paths near the minimum time add constructively.</p>
-                    
-                    <p><em>This same reasoning applies to classical mechanics (basketball trajectories) and quantum mechanics (double-slit), unifying all three scenarios under one principle!</em></p>
+                    <h4>Action Language</h4>
+                    <p>The optical path length S = ∫ n(s) ds plays the role of action for light. Minimizing S is the optics analogue of Hamilton's principle used in the basketball tab.</p>
                 </div>
             </div>
         </div>
@@ -175,87 +153,90 @@
                 <canvas id="mechanicsCanvas" width="800" height="600"></canvas>
             </div>
             <div class="physics-explanation">
-                <h3>📚 Physics Explanation: Hamilton's Principle & Sum Over Paths</h3>
-                
-                <div class="explanation-section">
-                    <h4>The Principle of Stationary Action</h4>
-                    <p>For a particle moving from point A to point B in a fixed time T, the actual path is the one that makes the <strong>action</strong> stationary (usually a minimum). The action is:</p>
-                    
-                    <div class="formula">
-                        <strong>Action:</strong> S = ∫₀ᵀ (T - V) dt = ∫₀ᵀ (½mv² - mgy) dt
-                    </div>
-                    
-                    <p>where T is kinetic energy and V is potential energy. This is <strong>Hamilton's Principle</strong>, the foundation of classical mechanics.</p>
-                </div>
+                <h3>📚 Hamilton's Principle at Court-side</h3>
 
                 <div class="explanation-section">
-                    <h4>Why the Classical Path Dominates</h4>
-                    <p>Imagine the ball "trying" all possible paths. In quantum mechanics (Feynman's path integral), each path contributes an amplitude:</p>
-                    
-                    <div class="formula">
-                        <strong>Amplitude per path:</strong> e^(iS/ℏ)
-                    </div>
-                    
-                    <p>Paths with similar action have similar phases → <strong>constructive interference</strong>. Paths far from the stationary action have rapidly varying phases → <strong>destructive interference</strong>. The classical path sits where ∂S/∂path = 0, so nearby paths all contribute in phase!</p>
-                </div>
-
-                <div class="explanation-section">
-                    <h4>The Phase Diagram Visualization</h4>
-                    <p>The phasor diagram shows vectors e^(iS/ℏ) for each path. When you sum them tip-to-tail:</p>
-                    <ul>
-                        <li><strong>Near classical path:</strong> Phasors point roughly the same direction → large sum</li>
-                        <li><strong>Far from classical:</strong> Phasors point randomly → cancel out</li>
-                        <li><strong>Lower ℏ_eff:</strong> Phases rotate faster → only classical path survives (macroscopic limit)</li>
+                    <h4>Key Takeaways</h4>
+                    <ul class="compact-list">
+                        <li>The action S = ∫ (½mv² − mgy) dt is stationary for the true shot.</li>
+                        <li>Every dashed trajectory is a "what-if" variation around the shot.</li>
+                        <li>Color encodes action: cooler tones are closer to the optimum.</li>
                     </ul>
+                    <div class="formula">Action: S = ∫₀ᵀ (½mv² − mgy) dt</div>
                 </div>
 
                 <div class="explanation-section">
-                    <h4>Three Visualization Modes</h4>
-                    <p><strong>Spray Mode:</strong> Shows diverse paths (loops, zig-zags). Color indicates action (blue = low, red = high). The classical path is the greenest!</p>
-                    
-                    <p><strong>Neighborhood Mode:</strong> Paths near the classical trajectory. Watch how the phasor sum grows as you add paths close to the classical one.</p>
-                    
-                    <p><strong>Heatmap Mode:</strong> Grid of paths showing the "action landscape." The classical path sits in the valley.</p>
+                    <h4>Interference Picture</h4>
+                    <p>Each path contributes a phasor of length 1 pointing at angle S/ℏ. Near the classical track the phases line up, so the sum arrow grows. Far away they whirl around and cancel.</p>
                 </div>
 
                 <div class="explanation-section">
-                    <h4>From Quantum to Classical</h4>
-                    <p>This simulation bridges quantum and classical physics! For a macroscopic basketball, ℏ is so tiny that only the classical path contributes. But the <em>principle</em> is the same: nature sums over all possibilities, and stationary action dominates.</p>
-                    
-                    <p>This is Feynman's profound insight: <strong>classical mechanics emerges from quantum mechanics via stationary phase</strong>.</p>
+                    <h4>How to Use the Modes</h4>
+                    <ul class="compact-list">
+                        <li><strong>Spray:</strong> broad sampling of crazy arcs.</li>
+                        <li><strong>Neighborhood:</strong> tight bundle near the classical curve.</li>
+                        <li><strong>Heatmap:</strong> structured grid to map the action landscape.</li>
+                    </ul>
+                    <p>Lower ℏ_eff to mimic the classical limit where only the stationary path survives.</p>
                 </div>
             </div>
         </div>
 
         <div class="tab-content" id="quantum">
-            <div class="info-panel">
-                <h2>Quantum Double-Slit: Sum Over Paths</h2>
-                <p>Particles take all possible paths. The interference pattern emerges from summing quantum amplitudes.</p>
-                <div class="controls">
-                    <label>
-                        Slit Separation (mm):
-                        <input type="range" id="slitSeparation" min="0.1" max="1.0" step="0.1" value="0.5">
-                        <span id="slitSeparationValue">0.5</span>
-                    </label>
-                    <label>
-                        Wavelength (nm):
-                        <input type="range" id="wavelength" min="400" max="700" step="10" value="550">
-                        <span id="wavelengthValue">550</span>
-                    </label>
-                    <label>
-                        <input type="checkbox" id="showPaths" checked> Show Sample Paths
-                    </label>
-                    <label>
-                        <input type="checkbox" id="showArrows" checked> Show Phase Arrows
-                    </label>
+            <div class="simulation-wrapper">
+                <div class="info-panel">
+                    <h2>Quantum Double-Slit</h2>
+                    <p>Move the detector and adjust the setup to watch interference emerge from adding up every path.</p>
+                    <div class="controls">
+                        <label>
+                            Slit Separation (mm):
+                            <input type="range" id="slitSeparation" min="0.1" max="1.0" step="0.1" value="0.5">
+                            <span id="slitSeparationValue">0.5</span>
+                        </label>
+                        <label>
+                            Wavelength (nm):
+                            <input type="range" id="wavelength" min="400" max="700" step="10" value="550">
+                            <span id="wavelengthValue">550</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="showPaths" checked> Show Sample Paths
+                        </label>
+                        <label>
+                            <input type="checkbox" id="showArrows" checked> Show Phase Arrows
+                        </label>
+                    </div>
+                    <div class="stats">
+                        <p>Detector Position: <span id="detectorPos">0.00</span> mm</p>
+                        <p>Path Difference: <span id="pathDiff">0.0</span> nm</p>
+                        <p>Intensity: <span id="intensity">0.00</span></p>
+                    </div>
+                    <div class="guided-practice">
+                        <h3>🎯 Guided Practice</h3>
+                        <ol>
+                            <li>Drag across the screen to sample different detector spots.</li>
+                            <li>Change slit spacing to compress or widen the fringe spacing.</li>
+                            <li>Toggle arrows to see how phasors add to form bright and dark bands.</li>
+                        </ol>
+                    </div>
                 </div>
-                <div class="stats">
-                    <p>Detector Position: <span id="detectorPos">0.0</span> mm</p>
-                    <p>Path Difference: <span id="pathDiff">0.0</span> nm</p>
-                    <p>Intensity: <span id="intensity">0.00</span></p>
+                <canvas id="quantumCanvas" width="800" height="600"></canvas>
+            </div>
+            <div class="physics-explanation">
+                <h3>📚 Interference from All Paths</h3>
+                <div class="explanation-section">
+                    <h4>Superposition Rule</h4>
+                    <p>Each slit contributes a complex amplitude. The screen brightness tracks |ψ|² after summing the phasors from slit A and slit B.</p>
+                    <div class="formula">ψ = ψ_A + ψ_B, I = |ψ|²</div>
+                </div>
+                <div class="explanation-section">
+                    <h4>Geometry Controls the Phase</h4>
+                    <p>The relative phase Δφ is set by the extra distance one path travels. When Δφ = 2πm we get bright fringes; when Δφ = (2m+1)π they cancel.</p>
+                </div>
+                <div class="explanation-section">
+                    <h4>Connect Back to Action</h4>
+                    <p>The arrows you see are e<sup>iS/ℏ</sup>. Near constructive interference the action difference is tiny—exactly the stationary-action idea reused in the other tabs.</p>
                 </div>
             </div>
-            <canvas id="quantumCanvas" width="800" height="600"></canvas>
         </div>
     </div>
 

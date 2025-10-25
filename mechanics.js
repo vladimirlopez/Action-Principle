@@ -7,7 +7,7 @@ class MechanicsSimulation {
         this.animationFrame = null;
         
         // Simulation state
-        this.start = { x: 100, y: 500 };
+        this.startPoint = { x: 100, y: 500 };
         this.target = { x: 700, y: 300 };
         this.dragging = false;
         this.dragOffset = { x: 0, y: 0 };
@@ -18,6 +18,7 @@ class MechanicsSimulation {
         this.totalTime = 1.2; // seconds (fixed duration - Hamilton's principle)
         this.hbarEff = 0.5; // Effective ℏ for phase scaling
         this.numSegments = 50; // Path discretization
+        this.pixelScale = 50; // pixels per meter for physics conversions
         
         // Visualization modes
         this.mode = 'spray'; // 'spray', 'neighborhood', or 'heatmap'
@@ -123,7 +124,7 @@ class MechanicsSimulation {
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        
+
         const dist = Math.hypot(x - this.target.x, y - this.target.y);
         if (dist < 25) {
             this.dragging = true;
@@ -180,69 +181,85 @@ class MechanicsSimulation {
     // Calculate action for a given path
     calculateAction(points) {
         const dt = this.totalTime / (points.length - 1);
+        const scale = this.pixelScale;
+        const canvasHeight = this.canvas.height;
         let action = 0;
         
         for (let i = 0; i < points.length - 1; i++) {
             const p1 = points[i];
             const p2 = points[i + 1];
-            
-            // Velocity (in canvas units/s - scale appropriately)
-            const vx = (p2.x - p1.x) / dt;
-            const vy = (p1.y - p2.y) / dt; // Inverted y-axis
+
+            // Convert to physical meters (y measured upward from ground)
+            const x1 = p1.x / scale;
+            const y1 = (canvasHeight - p1.y) / scale;
+            const x2 = p2.x / scale;
+            const y2 = (canvasHeight - p2.y) / scale;
+
+            const vx = (x2 - x1) / dt;
+            const vy = (y2 - y1) / dt;
             const v2 = vx * vx + vy * vy;
-            
-            // Average height (convert canvas y to physical height)
-            const ybar = ((this.canvas.height - p1.y) + (this.canvas.height - p2.y)) / 2 / 50; // Scale to meters
-            
-            // Lagrangian: L = T - V = (1/2)mv² - mgy
-            const L = 0.5 * this.mass * (v2 / 2500) - this.mass * this.gravity * ybar;
-            
+
+            const ybar = (y1 + y2) * 0.5;
+
+            // Lagrangian: L = T - V = ½mv² - mgy
+            const L = 0.5 * this.mass * v2 - this.mass * this.gravity * ybar;
+
             action += L * dt;
         }
-        
+
         return action;
     }
 
     // Find classical path using parabola
     findClassicalPath() {
-        const dx = this.target.x - this.start.x;
-        const dy = this.start.y - this.target.y;
+        const scale = this.pixelScale;
+        const canvasHeight = this.canvas.height;
         const T = this.totalTime;
-        
-        // Initial velocity components for parabolic trajectory
-        const vx0 = dx / T;
-        const vy0 = (dy + 0.5 * this.gravity * T * T) / T;
-        
+
+        // Convert endpoints to physical coordinates (meters)
+        const x0 = this.startPoint.x / scale;
+        const y0 = (canvasHeight - this.startPoint.y) / scale;
+        const xT = this.target.x / scale;
+        const yT = (canvasHeight - this.target.y) / scale;
+
+        // Solve constant-acceleration equations for fixed time T
+        const vx0 = (xT - x0) / T;
+        const vy0 = (yT - y0 + 0.5 * this.gravity * T * T) / T;
+
         const points = [];
         for (let i = 0; i <= this.numSegments; i++) {
             const t = (i / this.numSegments) * T;
-            const x = this.start.x + vx0 * t;
-            const y = this.start.y - (vy0 * t - 0.5 * this.gravity * t * t);
-            points.push({ x, y });
+            const xPhys = x0 + vx0 * t;
+            const yPhys = y0 + vy0 * t - 0.5 * this.gravity * t * t;
+            points.push({
+                x: xPhys * scale,
+                y: canvasHeight - yPhys * scale
+            });
         }
-        
+
+        const action = this.calculateAction(points);
         return {
             points,
-            action: this.calculateAction(points),
-            phase: this.calculateAction(points) / this.hbarEff,
+            action,
+            phase: action / this.hbarEff,
             isClassical: true
         };
     }
 
     // Generate random control points for Bézier paths
     generateRandomControlPoints() {
-        const dx = this.target.x - this.start.x;
+        const dx = this.target.x - this.startPoint.x;
         
         // Control point 1
         const c1 = {
-            x: this.start.x + dx * (0.2 + Math.random() * 0.3),
-            y: this.start.y - 50 - Math.random() * 300
+            x: this.startPoint.x + dx * (0.2 + Math.random() * 0.3),
+            y: this.startPoint.y - 50 - Math.random() * 300
         };
         
         // Control point 2
         const c2 = {
-            x: this.start.x + dx * (0.5 + Math.random() * 0.3),
-            y: this.start.y - 50 - Math.random() * 300
+            x: this.startPoint.x + dx * (0.5 + Math.random() * 0.3),
+            y: this.startPoint.y - 50 - Math.random() * 300
         };
         
         return { c1, c2 };
@@ -251,17 +268,17 @@ class MechanicsSimulation {
     // Generate control points near classical path
     generateNearbyControlPoints(sigma = 30) {
         // Start from classical control points (approximate parabola)
-        const dx = this.target.x - this.start.x;
-        const dy = this.start.y - this.target.y;
+        const dx = this.target.x - this.startPoint.x;
+        const dy = this.startPoint.y - this.target.y;
         
         const classicalC1 = {
-            x: this.start.x + dx * 0.33,
-            y: this.start.y - dy * 0.8 - 100
+            x: this.startPoint.x + dx * 0.33,
+            y: this.startPoint.y - dy * 0.8 - 100
         };
         
         const classicalC2 = {
-            x: this.start.x + dx * 0.67,
-            y: this.start.y - dy * 0.8 - 100
+            x: this.startPoint.x + dx * 0.67,
+            y: this.startPoint.y - dy * 0.8 - 100
         };
         
         // Add Gaussian noise
@@ -289,7 +306,7 @@ class MechanicsSimulation {
             // Generate diverse random paths
             for (let i = 0; i < this.numPaths; i++) {
                 const { c1, c2 } = this.generateRandomControlPoints();
-                const points = this.resampleBezierPath(this.start, c1, c2, this.target, this.numSegments);
+                const points = this.resampleBezierPath(this.startPoint, c1, c2, this.target, this.numSegments);
                 const action = this.calculateAction(points);
                 const phase = action / this.hbarEff;
                 
@@ -300,7 +317,7 @@ class MechanicsSimulation {
             for (let i = 0; i < this.numPaths; i++) {
                 const sigma = 20 + i * 3; // Increasing deviation
                 const { c1, c2 } = this.generateNearbyControlPoints(sigma);
-                const points = this.resampleBezierPath(this.start, c1, c2, this.target, this.numSegments);
+                const points = this.resampleBezierPath(this.startPoint, c1, c2, this.target, this.numSegments);
                 const action = this.calculateAction(points);
                 const phase = action / this.hbarEff;
                 
@@ -309,21 +326,21 @@ class MechanicsSimulation {
         } else if (this.mode === 'heatmap') {
             // Generate grid of paths
             const gridSize = Math.floor(Math.sqrt(this.numPaths));
-            const dx = this.target.x - this.start.x;
+            const dx = this.target.x - this.startPoint.x;
             
             for (let i = 0; i < gridSize; i++) {
                 for (let j = 0; j < gridSize; j++) {
                     const c1 = {
-                        x: this.start.x + dx * (0.15 + i / gridSize * 0.4),
-                        y: this.start.y - 50 - j / gridSize * 300
+                        x: this.startPoint.x + dx * (0.15 + i / gridSize * 0.4),
+                        y: this.startPoint.y - 50 - j / gridSize * 300
                     };
                     
                     const c2 = {
-                        x: this.start.x + dx * (0.45 + i / gridSize * 0.4),
-                        y: this.start.y - 50 - j / gridSize * 300
+                        x: this.startPoint.x + dx * (0.45 + i / gridSize * 0.4),
+                        y: this.startPoint.y - 50 - j / gridSize * 300
                     };
                     
-                    const points = this.resampleBezierPath(this.start, c1, c2, this.target, this.numSegments);
+                    const points = this.resampleBezierPath(this.startPoint, c1, c2, this.target, this.numSegments);
                     const action = this.calculateAction(points);
                     const phase = action / this.hbarEff;
                     
@@ -474,11 +491,11 @@ class MechanicsSimulation {
         // Draw start point (shooter)
         ctx.fillStyle = '#333';
         ctx.beginPath();
-        ctx.arc(this.start.x, this.start.y, 8, 0, Math.PI * 2);
+        ctx.arc(this.startPoint.x, this.startPoint.y, 8, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#666';
         ctx.font = 'bold 12px Arial';
-        ctx.fillText('Shooter', this.start.x - 25, this.start.y + 25);
+        ctx.fillText('Shooter', this.startPoint.x - 25, this.startPoint.y + 25);
         
         // Draw target (hoop)
         ctx.strokeStyle = '#ff9800';
@@ -597,11 +614,9 @@ class MechanicsSimulation {
     }
 
     start() {
-        console.log('MechanicsSimulation.start() called');
         this.running = true;
         this.ballAnimTime = 0;
         this.generatePaths();
-        console.log('Paths generated:', this.paths.length);
         this.animate();
     }
 
