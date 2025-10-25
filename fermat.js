@@ -377,24 +377,24 @@ class FermatSimulation {
         
         // Medium labels with backgrounds - no overlap
     ctx.fillStyle = 'rgba(32, 37, 43, 0.95)';
-    ctx.fillRect(18, 18, 158, 28);
+    ctx.fillRect(18, 18, 150, 26);
     ctx.strokeStyle = 'rgba(73, 80, 87, 0.9)';
     ctx.lineWidth = 1;
-    ctx.strokeRect(18, 18, 158, 28);
+    ctx.strokeRect(18, 18, 150, 26);
 
     ctx.fillStyle = '#e0e0e0';
-    ctx.font = '600 13px "Inter", Arial';
-    ctx.fillText(`Air (n₁ = ${this.n1.toFixed(1)})`, 28, 37);
+    ctx.font = '600 12px "Inter", Arial';
+    ctx.fillText(`Air  n₁=${this.n1.toFixed(1)}`, 26, 35);
 
     ctx.fillStyle = 'rgba(32, 37, 43, 0.95)';
-    ctx.fillRect(18, this.boundaryY + 12, 176, 28);
+    ctx.fillRect(18, this.boundaryY + 12, 170, 26);
     ctx.strokeStyle = 'rgba(73, 80, 87, 0.9)';
     ctx.lineWidth = 1;
-    ctx.strokeRect(18, this.boundaryY + 12, 176, 28);
+    ctx.strokeRect(18, this.boundaryY + 12, 170, 26);
 
     ctx.fillStyle = '#e0e0e0';
-    ctx.font = '600 13px "Inter", Arial';
-    ctx.fillText(`Water (n₂ = ${this.n2.toFixed(1)})`, 28, this.boundaryY + 30);
+    ctx.font = '600 12px "Inter", Arial';
+    ctx.fillText(`Water  n₂=${this.n2.toFixed(1)}`, 26, this.boundaryY + 30);
         
         // Find optimal path
         const optimal = this.findOptimalRefractionPoint();

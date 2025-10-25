@@ -368,8 +368,8 @@ class QuantumSimulation {
         // Draw phase arrows if enabled
         if (this.showArrows) {
             const result = this.calculateAmplitude(this.detectorY);
-            const arrowBaseX = 430;
-            const arrowBaseY = 130;
+            const arrowBaseX = 120;
+            const arrowBaseY = 110;
             const arrowScale = 50;
             
             // Draw arrow diagram panel with better styling
