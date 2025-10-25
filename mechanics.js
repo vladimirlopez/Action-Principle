@@ -32,11 +32,11 @@ class MechanicsSimulation {
         this.classicalPath = null;
         
         // Animation
+        this.running = false;
         this.time = 0;
         this.ballAnimTime = 0;
         
         this.setupEventListeners();
-        this.generatePaths();
     }
 
     setupEventListeners() {
