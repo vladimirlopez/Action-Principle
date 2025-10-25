@@ -597,8 +597,11 @@ class MechanicsSimulation {
     }
 
     start() {
+        console.log('MechanicsSimulation.start() called');
         this.running = true;
         this.ballAnimTime = 0;
+        this.generatePaths();
+        console.log('Paths generated:', this.paths.length);
         this.animate();
     }
 
