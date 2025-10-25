@@ -403,21 +403,26 @@ class MechanicsSimulation {
         const width = this.canvas.width;
         const height = this.canvas.height;
         
-        // Clear canvas
-        ctx.fillStyle = '#ffffff';
+        // Clear canvas with gradient background
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, '#f8f9fc');
+        gradient.addColorStop(1, '#ffffff');
+        ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, width, height);
         
-        // Draw court/background
-        ctx.fillStyle = 'rgba(139, 195, 74, 0.1)';
+        // Draw court/background with better styling
+        ctx.fillStyle = 'rgba(139, 195, 74, 0.08)';
         ctx.fillRect(0, height - 100, width, 100);
         
         // Draw ground line
         ctx.strokeStyle = '#8bc34a';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([10, 5]);
         ctx.beginPath();
         ctx.moveTo(0, height - 100);
         ctx.lineTo(width, height - 100);
         ctx.stroke();
+        ctx.setLineDash([]);
         
         // Find min/max actions for color scaling
         let minAction = this.classicalPath ? this.classicalPath.action : Infinity;
@@ -433,11 +438,11 @@ class MechanicsSimulation {
             for (const path of this.paths) {
                 // Color based on action (cooler = lower S, warmer = higher S)
                 const actionRatio = (path.action - minAction) / (maxAction - minAction + 0.1);
-                const hue = 240 - actionRatio * 120; // Blue to red
-                const alpha = 0.3;
+                const hue = 220 - actionRatio * 100; // Blue to orange
+                const alpha = 0.25;
                 
-                ctx.strokeStyle = `hsla(${hue}, 70%, 50%, ${alpha})`;
-                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = `hsla(${hue}, 65%, 55%, ${alpha})`;
+                ctx.lineWidth = 1.2;
                 ctx.beginPath();
                 
                 for (let i = 0; i < path.points.length; i++) {
@@ -446,24 +451,29 @@ class MechanicsSimulation {
                     else ctx.lineTo(p.x, p.y);
                 }
                 ctx.stroke();
-                
-                // Show action labels if enabled
-                if (this.showActionLabels && path.points.length > 0) {
-                    const midPoint = path.points[Math.floor(path.points.length / 2)];
-                    ctx.fillStyle = `hsla(${hue}, 70%, 40%, 0.8)`;
-                    ctx.font = '9px Arial';
-                    ctx.fillText(`S=${path.action.toFixed(1)}`, midPoint.x - 20, midPoint.y - 5);
-                }
             }
         }
         
-        // Draw classical path
+        // Draw classical path with better visibility
         if (this.showClassicalPath && this.classicalPath) {
-            ctx.strokeStyle = '#4caf50';
-            ctx.lineWidth = 4;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = 'rgba(76, 175, 80, 0.5)';
-            ctx.setLineDash([8, 4]);
+            // Draw white outline first for contrast
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 6;
+            ctx.setLineDash([10, 5]);
+            ctx.beginPath();
+            
+            for (let i = 0; i < this.classicalPath.points.length; i++) {
+                const p = this.classicalPath.points[i];
+                if (i === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            }
+            ctx.stroke();
+            
+            // Draw colored path on top
+            ctx.strokeStyle = '#2e7d32';
+            ctx.lineWidth = 3.5;
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = 'rgba(76, 175, 80, 0.6)';
             ctx.beginPath();
             
             for (let i = 0; i < this.classicalPath.points.length; i++) {
@@ -474,12 +484,6 @@ class MechanicsSimulation {
             ctx.stroke();
             ctx.setLineDash([]);
             ctx.shadowBlur = 0;
-            
-            // Label
-            const midPoint = this.classicalPath.points[Math.floor(this.classicalPath.points.length / 2)];
-            ctx.fillStyle = '#2e7d32';
-            ctx.font = 'bold 11px Arial';
-            ctx.fillText(`Classical: S=${this.classicalPath.action.toFixed(1)}`, midPoint.x - 50, midPoint.y - 15);
         }
         
         // Draw phasors if enabled
@@ -510,32 +514,69 @@ class MechanicsSimulation {
             }
         }
         
-        // Draw start point (shooter)
+        // Draw start point (shooter) with better styling
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(this.startPoint.x, this.startPoint.y, 10, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
         ctx.fillStyle = '#333';
         ctx.beginPath();
-        ctx.arc(this.startPoint.x, this.startPoint.y, 8, 0, Math.PI * 2);
+        ctx.arc(this.startPoint.x, this.startPoint.y, 5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#666';
-        ctx.font = 'bold 12px Arial';
-        ctx.fillText('Shooter', this.startPoint.x - 25, this.startPoint.y + 25);
         
-        // Draw target (hoop)
-        ctx.strokeStyle = '#ff9800';
+        ctx.fillStyle = '#555';
+        ctx.font = 'bold 13px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Start', this.startPoint.x, this.startPoint.y + 28);
+        ctx.textAlign = 'left';
+        
+        // Draw target (hoop) with better styling
+        // Backboard
+        ctx.fillStyle = 'rgba(255, 152, 0, 0.1)';
+        ctx.fillRect(this.target.x - 3, this.target.y - 35, 6, 50);
+        
+        ctx.strokeStyle = '#e65100';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.target.x - 3, this.target.y - 35, 6, 50);
+        
+        // Hoop rim
+        ctx.strokeStyle = '#ff6f00';
         ctx.lineWidth = 5;
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = 'rgba(255, 152, 0, 0.4)';
         ctx.beginPath();
-        ctx.arc(this.target.x, this.target.y, 20, 0, Math.PI * 2);
+        ctx.arc(this.target.x, this.target.y, 22, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.shadowBlur = 0;
         
-        ctx.strokeStyle = '#ff9800';
+        // Inner circle
+        ctx.strokeStyle = '#ff8f00';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(this.target.x, this.target.y - 20);
-        ctx.lineTo(this.target.x, this.target.y + 30);
+        ctx.arc(this.target.x, this.target.y, 18, 0, Math.PI * 2);
         ctx.stroke();
         
+        // Net suggestion
+        ctx.strokeStyle = 'rgba(255, 152, 0, 0.3)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.moveTo(this.target.x + 18 * Math.cos(angle), this.target.y + 18 * Math.sin(angle));
+            ctx.lineTo(this.target.x, this.target.y + 35);
+            ctx.stroke();
+        }
+        
         ctx.fillStyle = '#e65100';
-        ctx.font = 'bold 12px Arial';
-        ctx.fillText('Hoop', this.target.x - 15, this.target.y + 45);
+        ctx.font = 'bold 13px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Hoop', this.target.x, this.target.y + 55);
+        ctx.textAlign = 'left';
         
         // Update stats
         const phasorSum = this.calculatePhasorSum();
@@ -545,42 +586,49 @@ class MechanicsSimulation {
     }
 
     drawPhasorDiagram(ctx) {
-        const phasorX = 650;
-        const phasorY = 80;
-        const phasorRadius = 60;
+        const phasorX = 660;
+        const phasorY = 90;
+        const phasorRadius = 55;
         
-        // Background panel
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        // Background panel with better styling
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.97)';
         ctx.strokeStyle = '#ddd';
         ctx.lineWidth = 2;
-        ctx.fillRect(phasorX - 70, phasorY - 70, 140, 180);
-        ctx.strokeRect(phasorX - 70, phasorY - 70, 140, 180);
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(phasorX - 75, phasorY - 75, 150, 190);
+        ctx.strokeRect(phasorX - 75, phasorY - 75, 150, 190);
+        ctx.shadowBlur = 0;
         
         // Title
         ctx.fillStyle = '#333';
-        ctx.font = 'bold 11px Arial';
-        ctx.fillText('Phase Diagram', phasorX - 60, phasorY - 55);
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Phasor Diagram', phasorX, phasorY - 58);
+        ctx.textAlign = 'left';
         
         // Draw circle
-        ctx.strokeStyle = '#ddd';
+        ctx.strokeStyle = '#e0e0e0';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(phasorX, phasorY, phasorRadius, 0, Math.PI * 2);
         ctx.stroke();
         
         // Draw axes
-        ctx.strokeStyle = '#ccc';
+        ctx.strokeStyle = '#e0e0e0';
+        ctx.setLineDash([2, 2]);
         ctx.beginPath();
-        ctx.moveTo(phasorX - phasorRadius - 5, phasorY);
-        ctx.lineTo(phasorX + phasorRadius + 5, phasorY);
+        ctx.moveTo(phasorX - phasorRadius - 10, phasorY);
+        ctx.lineTo(phasorX + phasorRadius + 10, phasorY);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(phasorX, phasorY - phasorRadius - 5);
-        ctx.lineTo(phasorX, phasorY + phasorRadius + 5);
+        ctx.moveTo(phasorX, phasorY - phasorRadius - 10);
+        ctx.lineTo(phasorX, phasorY + phasorRadius + 10);
         ctx.stroke();
+        ctx.setLineDash([]);
         
         // Draw individual phasors (sample some to avoid clutter)
-        const sampleSize = Math.min(15, this.paths.length);
+        const sampleSize = Math.min(12, this.paths.length);
         const step = sampleSize > 0 ? Math.max(1, Math.floor(this.paths.length / sampleSize)) : 1;
         
         let re = 0, im = 0;
@@ -588,14 +636,14 @@ class MechanicsSimulation {
         if (sampleSize > 0) {
             for (let i = 0; i < this.paths.length; i += step) {
                 const path = this.paths[i];
-                const arrowLen = 15;
+                const arrowLen = 12;
                 
-                ctx.strokeStyle = 'rgba(200, 100, 100, 0.4)';
+                ctx.strokeStyle = 'rgba(150, 150, 150, 0.3)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(phasorX + re * 15, phasorY + im * 15);
-                ctx.lineTo(phasorX + re * 15 + arrowLen * Math.cos(path.phase), 
-                           phasorY + im * 15 + arrowLen * Math.sin(path.phase));
+                ctx.moveTo(phasorX + re * 12, phasorY + im * 12);
+                ctx.lineTo(phasorX + re * 12 + arrowLen * Math.cos(path.phase), 
+                           phasorY + im * 12 + arrowLen * Math.sin(path.phase));
                 ctx.stroke();
                 
                 re += Math.cos(path.phase);
@@ -608,36 +656,47 @@ class MechanicsSimulation {
             im += Math.sin(this.classicalPath.phase);
         }
         
-        // Draw sum vector
+        // Draw sum vector with prominence
         const sumLen = Math.hypot(re, im);
         const sumAngle = Math.atan2(im, re);
-        const scale = Math.min(1, phasorRadius / (sumLen * 1.5));
+        const scale = Math.min(1, phasorRadius / (sumLen * 1.2));
         
-        ctx.strokeStyle = '#4caf50';
-        ctx.fillStyle = '#4caf50';
-        ctx.lineWidth = 3;
+        // Shadow for depth
+        ctx.strokeStyle = 'rgba(76, 175, 80, 0.2)';
+        ctx.lineWidth = 5;
         ctx.beginPath();
         ctx.moveTo(phasorX, phasorY);
-        ctx.lineTo(phasorX + re * 15 * scale, phasorY + im * 15 * scale);
+        ctx.lineTo(phasorX + re * 12 * scale + 1, phasorY + im * 12 * scale + 1);
+        ctx.stroke();
+        
+        // Main arrow
+        ctx.strokeStyle = '#4caf50';
+        ctx.fillStyle = '#4caf50';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(phasorX, phasorY);
+        ctx.lineTo(phasorX + re * 12 * scale, phasorY + im * 12 * scale);
         ctx.stroke();
         
         // Arrowhead
-        const headLen = 8;
+        const headLen = 10;
         const headAngle = sumAngle;
         ctx.beginPath();
-        ctx.moveTo(phasorX + re * 15 * scale, phasorY + im * 15 * scale);
-        ctx.lineTo(phasorX + re * 15 * scale - headLen * Math.cos(headAngle - 0.3),
-                   phasorY + im * 15 * scale - headLen * Math.sin(headAngle - 0.3));
-        ctx.lineTo(phasorX + re * 15 * scale - headLen * Math.cos(headAngle + 0.3),
-                   phasorY + im * 15 * scale - headLen * Math.sin(headAngle + 0.3));
+        ctx.moveTo(phasorX + re * 12 * scale, phasorY + im * 12 * scale);
+        ctx.lineTo(phasorX + re * 12 * scale - headLen * Math.cos(headAngle - 0.4),
+                   phasorY + im * 12 * scale - headLen * Math.sin(headAngle - 0.4));
+        ctx.lineTo(phasorX + re * 12 * scale - headLen * Math.cos(headAngle + 0.4),
+                   phasorY + im * 12 * scale - headLen * Math.sin(headAngle + 0.4));
         ctx.closePath();
         ctx.fill();
         
-        // Label
+        // Label below
         ctx.fillStyle = '#2e7d32';
-        ctx.font = '10px Arial';
-        ctx.fillText('Phasor Sum', phasorX - 35, phasorY + 80);
-        ctx.fillText(`|Sum| = ${sumLen.toFixed(1)}`, phasorX - 35, phasorY + 95);
+        ctx.font = '11px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sum', phasorX, phasorY + 80);
+        ctx.fillText(`|Σ| = ${sumLen.toFixed(1)}`, phasorX, phasorY + 95);
+        ctx.textAlign = 'left';
     }
 
     start() {

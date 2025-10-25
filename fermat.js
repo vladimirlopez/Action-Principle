@@ -307,75 +307,98 @@ class FermatSimulation {
         const width = this.canvas.width;
         const height = this.canvas.height;
         
-        // Clear canvas
-        ctx.fillStyle = '#ffffff';
+        // Clear canvas with gradient
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, '#f0f7ff');
+        gradient.addColorStop(0.5, '#ffffff');
+        gradient.addColorStop(1, '#e3f2fd');
+        ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, width, height);
         
-        // Draw two media regions
+        // Draw two media regions with better styling
         // Medium 1 (Air) - top region
-        ctx.fillStyle = 'rgba(135, 206, 250, 0.15)'; // Light blue
+        ctx.fillStyle = 'rgba(135, 206, 250, 0.08)';
         ctx.fillRect(0, 0, width, this.boundaryY);
-        ctx.fillStyle = '#333';
-        ctx.font = 'bold 16px Arial';
-        ctx.fillText(`Air (n₁ = ${this.n1.toFixed(1)})`, 20, 30);
         
         // Medium 2 (Water) - bottom region
-        ctx.fillStyle = 'rgba(30, 144, 255, 0.2)'; // Darker blue
+        ctx.fillStyle = 'rgba(30, 144, 255, 0.15)';
         ctx.fillRect(0, this.boundaryY, width, height - this.boundaryY);
-        ctx.fillStyle = '#333';
-        ctx.fillText(`Water (n₂ = ${this.n2.toFixed(1)})`, 20, this.boundaryY + 30);
         
         // Draw boundary line
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 3;
-        ctx.setLineDash([10, 5]);
+        ctx.strokeStyle = '#455a64';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([12, 6]);
         ctx.beginPath();
         ctx.moveTo(0, this.boundaryY);
         ctx.lineTo(width, this.boundaryY);
         ctx.stroke();
         ctx.setLineDash([]);
         
+        // Medium labels with backgrounds - no overlap
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.fillRect(15, 15, 140, 28);
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(15, 15, 140, 28);
+        
+        ctx.fillStyle = '#263238';
+        ctx.font = 'bold 15px Arial';
+        ctx.fillText(`Air (n₁ = ${this.n1.toFixed(1)})`, 22, 35);
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.fillRect(15, this.boundaryY + 10, 160, 28);
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(15, this.boundaryY + 10, 160, 28);
+        
+        ctx.fillStyle = '#263238';
+        ctx.font = 'bold 15px Arial';
+        ctx.fillText(`Water (n₂ = ${this.n2.toFixed(1)})`, 22, this.boundaryY + 28);
+        
         // Find optimal path
         const optimal = this.findOptimalRefractionPoint();
         
-        // Draw alternative paths if enabled
+        // Draw alternative paths if enabled - cleaner
         if (this.showAllPaths) {
-            for (let i = 0; i < 15; i++) {
-                const testX = 150 + i * 40;
+            for (let i = 0; i < 12; i++) {
+                const testX = 180 + i * 45;
                 const time = this.calculateTravelTime(testX);
                 
                 // Color based on how far from optimal
                 const timeDiff = time - optimal.time;
                 const colorIntensity = Math.min(timeDiff * 50, 1);
-                const alpha = 0.25;
+                const alpha = 0.2;
                 
-                ctx.strokeStyle = `rgba(${180 + colorIntensity * 75}, ${100 - colorIntensity * 80}, ${100 - colorIntensity * 50}, ${alpha})`;
-                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = `rgba(${170 + colorIntensity * 70}, ${110 - colorIntensity * 90}, ${100 - colorIntensity * 50}, ${alpha})`;
+                ctx.lineWidth = 1.3;
                 ctx.beginPath();
                 ctx.moveTo(this.source.x, this.source.y);
                 ctx.lineTo(testX, this.boundaryY);
                 ctx.lineTo(this.target.x, this.target.y);
                 ctx.stroke();
-                
-                // Label with time - only for every other path to reduce clutter
-                if (i % 2 === 0) {
-                    ctx.fillStyle = `rgba(180, 60, 60, 0.8)`;
-                    ctx.font = '9px Arial';
-                    const labelY = this.boundaryY < 300 ? this.boundaryY + 15 : this.boundaryY - 10;
-                    ctx.fillText(`${time.toFixed(2)}`, testX - 12, labelY);
-                }
             }
         }
         
-        // Draw optimal path (calculated) - the path of least time
+        // Draw optimal path with better visibility
         const optimalTime = optimal.time;
         
-        // Draw glowing effect for optimal path
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = 'rgba(100, 255, 100, 0.6)';
-        ctx.strokeStyle = 'rgba(100, 255, 100, 0.7)';
-        ctx.lineWidth = 4;
-        ctx.setLineDash([8, 4]);
+        // White outline first
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 7;
+        ctx.setLineDash([10, 5]);
+        ctx.beginPath();
+        ctx.moveTo(this.source.x, this.source.y);
+        ctx.lineTo(optimal.x, this.boundaryY);
+        ctx.lineTo(this.target.x, this.target.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Colored path on top
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'rgba(76, 175, 80, 0.6)';
+        ctx.strokeStyle = '#4caf50';
+        ctx.lineWidth = 3.5;
+        ctx.setLineDash([10, 5]);
         ctx.beginPath();
         ctx.moveTo(this.source.x, this.source.y);
         ctx.lineTo(optimal.x, this.boundaryY);
