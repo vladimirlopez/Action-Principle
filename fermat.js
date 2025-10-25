@@ -308,7 +308,7 @@ class FermatSimulation {
         const height = this.canvas.height;
         
         // Clear canvas
-        ctx.fillStyle = '#fafafa';
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
         
         // Draw two media regions

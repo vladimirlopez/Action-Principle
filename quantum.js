@@ -148,58 +148,76 @@ class QuantumSimulation {
         const width = this.canvas.width;
         const height = this.canvas.height;
         
-        // Clear canvas
-        ctx.fillStyle = '#fafafa';
+        // Clear canvas with white background
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
         
-        // Draw intensity pattern on screen
+        // Draw intensity pattern on screen with better contrast
         const screenX = 700;
+        const maxIntensity = 4; // Theoretical max for two equal amplitudes
+        
         for (const point of this.intensityPattern) {
-            const brightness = point.intensity / 4; // Normalize
-            const alpha = Math.min(brightness, 1);
-            ctx.fillStyle = `rgba(100, 150, 255, ${alpha})`;
-            ctx.fillRect(screenX, point.y, 50, 2);
+            const normalizedIntensity = point.intensity / maxIntensity;
+            // Use a more visible color gradient
+            const brightness = Math.floor(normalizedIntensity * 255);
+            const alpha = 0.6 + normalizedIntensity * 0.4; // More opaque
+            ctx.fillStyle = `rgba(50, 100, ${brightness}, ${alpha})`;
+            ctx.fillRect(screenX, point.y, 80, 3); // Wider and taller bars
         }
         
         // Draw screen
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.moveTo(screenX, 50);
         ctx.lineTo(screenX, 550);
         ctx.stroke();
         
-        ctx.fillStyle = '#333';
-        ctx.font = '14px Arial';
-        ctx.fillText('Screen', screenX + 5, 30);
+        ctx.fillStyle = '#222';
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText('Detection Screen', screenX + 10, 35);
         
-        // Draw barrier with slits
+        // Draw barrier with slits - make it more prominent
         const barrierX = 350;
-        ctx.fillStyle = '#333';
-        ctx.fillRect(barrierX - 5, 50, 10, this.slit1.y - 60);
-        ctx.fillRect(barrierX - 5, this.slit1.y + 10, 10, this.slit2.y - this.slit1.y - 20);
-        ctx.fillRect(barrierX - 5, this.slit2.y + 10, 10, 540 - this.slit2.y);
+        ctx.fillStyle = '#444';
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(barrierX - 8, 50, 16, this.slit1.y - 60);
+        ctx.fillRect(barrierX - 8, this.slit1.y + 10, 16, this.slit2.y - this.slit1.y - 20);
+        ctx.fillRect(barrierX - 8, this.slit2.y + 10, 16, 540 - this.slit2.y);
+        ctx.shadowBlur = 0;
         
-        // Draw slit labels
-        ctx.fillStyle = '#667eea';
-        ctx.font = '12px Arial';
-        ctx.fillText('A', barrierX + 15, this.slit1.y + 5);
-        ctx.fillText('B', barrierX + 15, this.slit2.y + 5);
+        // Highlight the slits
+        ctx.fillStyle = '#4ecdc4';
+        ctx.fillRect(barrierX - 8, this.slit1.y - 5, 16, 15);
+        ctx.fillRect(barrierX - 8, this.slit2.y - 5, 16, 15);
         
-        // Draw paths if enabled
+        // Draw slit labels with background
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(barrierX + 12, this.slit1.y - 12, 30, 20);
+        ctx.fillRect(barrierX + 12, this.slit2.y - 12, 30, 20);
+        
+        ctx.fillStyle = '#d32f2f';
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText('A', barrierX + 20, this.slit1.y + 3);
+        ctx.fillStyle = '#1976d2';
+        ctx.fillText('B', barrierX + 20, this.slit2.y + 3);
+        
+        // Draw paths if enabled - show MORE paths
         if (this.showPaths) {
             const screenPoint = { x: screenX, y: this.detectorY };
             
-            // Sample additional paths (slight variations)
-            const numSamplePaths = 3;
+            // Show many more sample paths through each slit
+            const numSamplePaths = 8;
             
-            // Paths through slit 1
+            // Paths through slit 1 (red/orange)
             for (let i = 0; i < numSamplePaths; i++) {
-                const offset = (i - 1) * 10;
+                const offset = (i - numSamplePaths/2) * 4;
                 const slitPoint = { x: barrierX, y: this.slit1.y + offset };
                 
-                ctx.strokeStyle = `rgba(255, 100, 100, ${0.3 - i * 0.08})`;
-                ctx.lineWidth = 1;
+                const alpha = 0.15 + 0.1 / (Math.abs(i - numSamplePaths/2) + 1);
+                ctx.strokeStyle = `rgba(211, 47, 47, ${alpha})`;
+                ctx.lineWidth = 1.5;
                 ctx.beginPath();
                 ctx.moveTo(this.source.x, this.source.y);
                 ctx.lineTo(slitPoint.x, slitPoint.y);
@@ -207,13 +225,14 @@ class QuantumSimulation {
                 ctx.stroke();
             }
             
-            // Paths through slit 2
+            // Paths through slit 2 (blue)
             for (let i = 0; i < numSamplePaths; i++) {
-                const offset = (i - 1) * 10;
+                const offset = (i - numSamplePaths/2) * 4;
                 const slitPoint = { x: barrierX, y: this.slit2.y + offset };
                 
-                ctx.strokeStyle = `rgba(100, 100, 255, ${0.3 - i * 0.08})`;
-                ctx.lineWidth = 1;
+                const alpha = 0.15 + 0.1 / (Math.abs(i - numSamplePaths/2) + 1);
+                ctx.strokeStyle = `rgba(25, 118, 210, ${alpha})`;
+                ctx.lineWidth = 1.5;
                 ctx.beginPath();
                 ctx.moveTo(this.source.x, this.source.y);
                 ctx.lineTo(slitPoint.x, slitPoint.y);
@@ -221,16 +240,17 @@ class QuantumSimulation {
                 ctx.stroke();
             }
             
-            // Main paths
-            ctx.strokeStyle = 'rgba(255, 100, 100, 0.6)';
-            ctx.lineWidth = 2;
+            // Main central paths (thicker)
+            ctx.strokeStyle = 'rgba(211, 47, 47, 0.8)';
+            ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(this.source.x, this.source.y);
             ctx.lineTo(this.slit1.x, this.slit1.y);
             ctx.lineTo(screenPoint.x, screenPoint.y);
             ctx.stroke();
             
-            ctx.strokeStyle = 'rgba(100, 100, 255, 0.6)';
+            ctx.strokeStyle = 'rgba(25, 118, 210, 0.8)';
+            ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(this.source.x, this.source.y);
             ctx.lineTo(this.slit2.x, this.slit2.y);
@@ -241,75 +261,138 @@ class QuantumSimulation {
         // Draw phase arrows if enabled
         if (this.showArrows) {
             const result = this.calculateAmplitude(this.detectorY);
-            const arrowBaseX = 600;
-            const arrowBaseY = 100;
-            const arrowScale = 40;
+            const arrowBaseX = 580;
+            const arrowBaseY = 120;
+            const arrowScale = 50;
             
-            // Draw arrow diagram panel
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.strokeStyle = '#ddd';
+            // Draw arrow diagram panel with better styling
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.strokeStyle = '#ccc';
             ctx.lineWidth = 2;
-            ctx.fillRect(arrowBaseX - 60, arrowBaseY - 60, 180, 150);
-            ctx.strokeRect(arrowBaseX - 60, arrowBaseY - 60, 180, 150);
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = 'rgba(0,0,0,0.2)';
+            ctx.fillRect(arrowBaseX - 80, arrowBaseY - 80, 200, 180);
+            ctx.strokeRect(arrowBaseX - 80, arrowBaseY - 80, 200, 180);
+            ctx.shadowBlur = 0;
             
             ctx.fillStyle = '#333';
-            ctx.font = 'bold 12px Arial';
-            ctx.fillText('Phase Arrows', arrowBaseX - 50, arrowBaseY - 45);
+            ctx.font = 'bold 13px Arial';
+            ctx.fillText('Phasor Addition', arrowBaseX - 65, arrowBaseY - 60);
             
             // Draw reference axes
             ctx.strokeStyle = '#ddd';
             ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
             ctx.beginPath();
-            ctx.moveTo(arrowBaseX - 50, arrowBaseY);
-            ctx.lineTo(arrowBaseX + 100, arrowBaseY);
+            ctx.moveTo(arrowBaseX - 70, arrowBaseY);
+            ctx.lineTo(arrowBaseX + 110, arrowBaseY);
             ctx.stroke();
             ctx.beginPath();
-            ctx.moveTo(arrowBaseX, arrowBaseY - 50);
-            ctx.lineTo(arrowBaseX, arrowBaseY + 60);
+            ctx.moveTo(arrowBaseX, arrowBaseY - 70);
+            ctx.lineTo(arrowBaseX, arrowBaseY + 80);
             ctx.stroke();
+            ctx.setLineDash([]);
             
-            // Draw amplitude arrows
+            // Labels for axes
+            ctx.fillStyle = '#888';
+            ctx.font = '11px Arial';
+            ctx.fillText('Re', arrowBaseX + 95, arrowBaseY + 15);
+            ctx.fillText('Im', arrowBaseX - 10, arrowBaseY - 55);
+            
+            // Draw amplitude arrows with better styling
             this.drawArrow(ctx, arrowBaseX, arrowBaseY, arrowScale, result.phase1, 
-                          'rgba(255, 100, 100, 0.8)', 'A');
+                          'rgba(211, 47, 47, 0.9)', '');
             
             const end1X = arrowBaseX + arrowScale * Math.cos(result.phase1);
             const end1Y = arrowBaseY + arrowScale * Math.sin(result.phase1);
             
             this.drawArrow(ctx, end1X, end1Y, arrowScale, result.phase2, 
-                          'rgba(100, 100, 255, 0.8)', 'B');
+                          'rgba(25, 118, 210, 0.9)', '');
             
-            // Draw resultant
+            // Label the individual arrows
+            ctx.fillStyle = '#d32f2f';
+            ctx.font = 'bold 12px Arial';
+            ctx.fillText('ψ_A', arrowBaseX + 25 * Math.cos(result.phase1) - 5, 
+                         arrowBaseY + 25 * Math.sin(result.phase1) + 15);
+            
+            ctx.fillStyle = '#1976d2';
+            ctx.fillText('ψ_B', end1X + 25 * Math.cos(result.phase2) - 5, 
+                         end1Y + 25 * Math.sin(result.phase2) + 15);
+            
+            // Draw resultant with dashed line from origin
             const totalLength = arrowScale * Math.sqrt(result.intensity) / Math.sqrt(2);
             const totalPhase = Math.atan2(result.totalAmp.y, result.totalAmp.x);
+            
+            ctx.strokeStyle = 'rgba(76, 175, 80, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(arrowBaseX, arrowBaseY);
+            ctx.lineTo(end1X + arrowScale * Math.cos(result.phase2), 
+                       end1Y + arrowScale * Math.sin(result.phase2));
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
             this.drawArrow(ctx, arrowBaseX, arrowBaseY, totalLength, totalPhase, 
-                          '#4ecdc4', 'Sum');
+                          '#4caf50', '');
+            
+            // Label the sum
+            ctx.fillStyle = '#2e7d32';
+            ctx.font = 'bold 13px Arial';
+            ctx.fillText('ψ_total', arrowBaseX + totalLength * Math.cos(totalPhase) * 0.5 - 15, 
+                         arrowBaseY + totalLength * Math.sin(totalPhase) * 0.5 - 8);
+            
+            // Show intensity value
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.fillText(`I = |ψ|² = ${result.intensity.toFixed(2)}`, arrowBaseX - 65, arrowBaseY + 70);
         }
         
-        // Draw source
+        // Draw source with better styling
         ctx.fillStyle = '#ff6b6b';
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = 'rgba(255, 107, 107, 0.5)';
         ctx.beginPath();
-        ctx.arc(this.source.x, this.source.y, 12, 0, Math.PI * 2);
+        ctx.arc(this.source.x, this.source.y, 15, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('S', this.source.x, this.source.y + 5);
+        ctx.shadowBlur = 0;
         
-        // Draw detector
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('S', this.source.x, this.source.y + 6);
+        ctx.textAlign = 'left';
+        
+        ctx.fillStyle = '#333';
+        ctx.font = '12px Arial';
+        ctx.fillText('Source', this.source.x - 20, this.source.y + 30);
+        
+        // Draw detector pointer with better visibility
         ctx.fillStyle = '#4ecdc4';
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = 'rgba(78, 205, 196, 0.6)';
         ctx.beginPath();
-        ctx.moveTo(screenX, this.detectorY - 10);
-        ctx.lineTo(screenX + 15, this.detectorY);
-        ctx.lineTo(screenX, this.detectorY + 10);
+        ctx.moveTo(screenX, this.detectorY - 12);
+        ctx.lineTo(screenX + 20, this.detectorY);
+        ctx.lineTo(screenX, this.detectorY + 12);
         ctx.closePath();
         ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        ctx.strokeStyle = '#2c9e94';
+        ctx.lineWidth = 2;
+        ctx.stroke();
         
         // Draw wave animation from source
-        const numWaves = 8;
+        const numWaves = 6;
         for (let i = 0; i < numWaves; i++) {
-            const phase = (this.time * 0.05 + i * 0.3) % 1;
-            const radius = phase * 250;
-            const alpha = 0.3 * (1 - phase);
+            const phase = (this.time * 0.03 + i * 0.25) % 1;
+            const radius = phase * 280;
+            const alpha = 0.25 * (1 - phase);
             
             ctx.strokeStyle = `rgba(100, 150, 255, ${alpha})`;
             ctx.lineWidth = 2;

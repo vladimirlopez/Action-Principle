@@ -404,7 +404,7 @@ class MechanicsSimulation {
         const height = this.canvas.height;
         
         // Clear canvas
-        ctx.fillStyle = '#f5f5f5';
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
         
         // Draw court/background

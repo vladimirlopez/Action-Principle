@@ -3,8 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Principle of Least Action - Interactive Simulation</title>
+    <title>Visualizing the Principle of Least Action</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
 </head>
 <body>
     <div class="container">
@@ -56,33 +66,51 @@
                 <canvas id="fermatCanvas" width="800" height="600"></canvas>
             </div>
             <div class="physics-explanation">
-                <h3>📚 Fermat in a Nutshell</h3>
+                <h3>📚 What Does This Show?</h3>
 
                 <div class="explanation-section">
-                    <h4>Key Idea</h4>
+                    <h4>Fermat's Principle</h4>
+                    <p><strong>Statement:</strong> Light traveling between two points takes the path that requires the least time (or more generally, makes time stationary).</p>
+                    <p>In this simulation, light goes from point A (in air) to point B (in water). The blue dot on the boundary is the refraction point—you can drag it left or right.</p>
+                </div>
+
+                <div class="explanation-section">
+                    <h4>Travel Time Calculation</h4>
+                    <p>For a given refraction point, the total time is:</p>
+                    <div class="formula">
+                        $$T = \frac{d_1}{v_1} + \frac{d_2}{v_2}$$
+                    </div>
                     <ul class="compact-list">
-                        <li>Light chooses the path that makes travel time stationary.</li>
-                        <li>Drag the refraction point to sweep through every candidate path.</li>
-                        <li>The green curve marks the minimum of the time graph.</li>
+                        <li>$d_1$ = distance from A to refraction point (in air)</li>
+                        <li>$d_2$ = distance from refraction point to B (in water)</li>
+                        <li>$v_1 = c/n_1$ = speed of light in air ($n_1 \approx 1$)</li>
+                        <li>$v_2 = c/n_2$ = speed of light in water ($n_2 \approx 1.33$ to 2.5 adjustable)</li>
                     </ul>
-                    <div class="formula">Travel Time: T = d₁/v₁ + d₂/v₂</div>
+                    <p><strong>The graph</strong> on the right shows $T$ as you sweep the refraction point horizontally. The minimum of this curve is the physical path light actually takes.</p>
                 </div>
 
                 <div class="explanation-section">
-                    <h4>Snell's Law Appears Automatically</h4>
-                    <p>At the optimum we have ∂T/∂x = 0, which gives the familiar relation</p>
-                    <div class="formula"><strong>Snell's Law:</strong> n₁ sin θ₁ = n₂ sin θ₂</div>
-                    <p>The angle readouts update live, confirming that the minimum-time path also satisfies Snell.</p>
+                    <h4>Snell's Law Emerges</h4>
+                    <p>When you minimize travel time ($dT/dx = 0$), the result is:</p>
+                    <div class="formula">
+                        $$n_1 \sin\theta_1 = n_2 \sin\theta_2$$
+                    </div>
+                    <p>This is <strong>Snell's Law of refraction</strong>. The simulation displays $\theta_1$ (incident angle) and $\theta_2$ (refracted angle) in real-time, and shows a checkmark when Snell's law is satisfied at the optimal point.</p>
+                    <p><strong>Physical meaning:</strong> Light bends toward the normal when entering a denser medium because the path that balances "go straight in air" vs "go straight in water" happens to bend at this specific angle.</p>
                 </div>
 
                 <div class="explanation-section">
-                    <h4>Wavefront View</h4>
-                    <p>Toggle wavefronts to see Huygens' picture: wavelets slow down in the denser medium, bending the front so that only the least-time route adds constructively.</p>
+                    <h4>Wavefront Visualization</h4>
+                    <p>Toggle "Show Wavefronts" to see semicircular wave crests emanating from A. In the lower medium (water), the wavelets propagate slower, causing the wavefront to bend. This geometric picture (Huygens' principle) is equivalent to Fermat's least-time principle.</p>
                 </div>
 
                 <div class="explanation-section">
-                    <h4>Action Language</h4>
-                    <p>The optical path length S = ∫ n(s) ds plays the role of action for light. Minimizing S is the optics analogue of Hamilton's principle used in the basketball tab.</p>
+                    <h4>Connection to Action</h4>
+                    <p>In optics, we often define the <strong>optical path length</strong>:</p>
+                    <div class="formula">
+                        $$S = \int n(s)\, ds$$
+                    </div>
+                    <p>where $n(s)$ is the refractive index along the path. Minimizing $S$ (optical action) is equivalent to minimizing time. This is the same variational principle used for mechanics (Hamilton's principle) and quantum paths (Feynman's sum-over-histories).</p>
                 </div>
             </div>
         </div>
@@ -144,31 +172,55 @@
                 <canvas id="mechanicsCanvas" width="800" height="600"></canvas>
             </div>
             <div class="physics-explanation">
-                <h3>📚 Hamilton's Principle at Court-side</h3>
-
+                <h3>📚 What Does This Show?</h3>
+                
                 <div class="explanation-section">
-                    <h4>Key Takeaways</h4>
-                    <ul class="compact-list">
-                        <li>The action S = ∫ (½mv² − mgy) dt is stationary for the true shot.</li>
-                        <li>Every dashed trajectory is a "what-if" variation around the shot.</li>
-                        <li>Color encodes action: cooler tones are closer to the optimum.</li>
-                    </ul>
-                    <div class="formula">Action: S = ∫₀ᵀ (½mv² − mgy) dt</div>
+                    <h4>The Central Idea</h4>
+                    <p><strong>Nature "explores" all possible trajectories, but only one wins.</strong></p>
+                    <p>The basketball could theoretically follow any curved path from shooter to hoop. But physics picks the one trajectory that extremizes (minimizes or maximizes) a quantity called the <strong>action</strong>.</p>
                 </div>
 
                 <div class="explanation-section">
-                    <h4>Interference Picture</h4>
-                    <p>Each path contributes a unit phasor rotated by its action difference ΔS relative to the classical arc. When ΔS is tiny the arrows line up and reinforce; otherwise they whirl around and cancel.</p>
+                    <h4>What is Action?</h4>
+                    <p>For each path, we calculate:</p>
+                    <div class="formula">
+                        $$S = \int_0^T \left( \frac{1}{2}mv^2 - mgy \right) dt$$
+                    </div>
+                    <p><strong>Translation:</strong> Along the path, at every instant, compute kinetic energy $\frac{1}{2}mv^2$ minus potential energy $mgy$, then sum it all up over time $T$.</p>
+                    <ul class="compact-list">
+                        <li>$m$ = mass of basketball (0.6 kg)</li>
+                        <li>$v$ = speed at that instant</li>
+                        <li>$g$ = gravity (9.8 m/s²)</li>
+                        <li>$y$ = height above ground</li>
+                        <li>$T$ = total flight time (auto-computed)</li>
+                    </ul>
+                </div>
+
+                <div class="explanation-section">
+                    <h4>Why the Classical Path Wins</h4>
+                    <p><strong>Hamilton's Principle:</strong> The true physical trajectory makes $S$ stationary—meaning nearby variations don't change $S$ (to first order).</p>
+                    <p>The green dashed curve is the <strong>parabolic trajectory</strong> that solves Newton's $F = ma$ under gravity. It automatically satisfies the stationary-action condition.</p>
+                    <p><strong>Color code:</strong> Each alternative path is colored by its action value. Blue paths are closer to optimal; red paths have much higher action.</p>
+                </div>
+
+                <div class="explanation-section">
+                    <h4>The Phasor Visualization</h4>
+                    <p>Each path contributes a rotating arrow (phasor) whose angle depends on how far its action deviates from the classical value:</p>
+                    <div class="formula">
+                        $$\text{angle} = \frac{S_{\text{path}} - S_{\text{classical}}}{\text{scale}}$$
+                    </div>
+                    <p><strong>Why phasors?</strong> This mimics quantum mechanics, where paths add as complex amplitudes $e^{iS/\hbar}$. Near the classical path, phases align → constructive interference. Far away, they point in random directions → cancellation.</p>
+                    <p><strong>Interpretation:</strong> In the classical limit (large mass), only paths extremely close to the stationary-action trajectory contribute significantly.</p>
                 </div>
 
                 <div class="explanation-section">
                     <h4>How to Use the Modes</h4>
                     <ul class="compact-list">
-                        <li><strong>Spray:</strong> broad sampling of crazy arcs.</li>
-                        <li><strong>Neighborhood:</strong> tight bundle near the classical curve.</li>
-                        <li><strong>Heatmap:</strong> structured grid to map the action landscape.</li>
+                        <li><strong>Spray:</strong> Samples random wildly different paths. Green = classical solution.</li>
+                        <li><strong>Neighborhood:</strong> Zooms in to show small variations around the winner.</li>
+                        <li><strong>Heatmap:</strong> Maps action values across a grid of control points.</li>
                     </ul>
-                    <p>Toggle the phasor overlay to watch how constructive addition fades as the action drifts away from the stationary curve.</p>
+                    <p><strong>Experiment:</strong> Drag the hoop. The simulation recalculates the optimal flight time and parabolic path instantly. Watch how the action landscape shifts!</p>
                 </div>
             </div>
         </div>
@@ -197,9 +249,9 @@
                         </label>
                     </div>
                     <div class="stats">
-                        <p>Detector Position: <span id="detectorPos">0.00</span> mm</p>
-                        <p>Path Difference: <span id="pathDiff">0.0</span> nm</p>
-                        <p>Intensity: <span id="intensity">0.00</span></p>
+                        <p>Detector Y-position: <span id="detectorPos">0.00</span> mm</p>
+                        <p>Path difference $\Delta L$: <span id="pathDiff">0.0</span> nm</p>
+                        <p>Intensity $I$: <span id="intensity">0.00</span> (arbitrary units)</p>
                     </div>
                     <div class="guided-practice">
                         <h3>🎯 Guided Practice</h3>
@@ -212,20 +264,65 @@
                 </div>
                 <canvas id="quantumCanvas" width="800" height="600"></canvas>
             </div>
-            <div class="physics-explanation">
-                <h3>📚 Interference from All Paths</h3>
+                        <div class="physics-explanation">
+                <h3>📚 What Does This Show?</h3>
+                
                 <div class="explanation-section">
-                    <h4>Superposition Rule</h4>
-                    <p>Each slit contributes a complex amplitude. The screen brightness tracks |ψ|² after summing the phasors from slit A and slit B.</p>
-                    <div class="formula">ψ = ψ_A + ψ_B, I = |ψ|²</div>
+                    <h4>The Double-Slit Experiment</h4>
+                    <p><strong>Setup:</strong> Light from source S passes through two narrow slits (A and B), then hits a detection screen.</p>
+                    <p><strong>Classical expectation:</strong> Two bright bands (one behind each slit).</p>
+                    <p><strong>Quantum reality:</strong> An interference pattern—alternating bright and dark fringes across the entire screen!</p>
+                    <p><strong>Why?</strong> Light arrives at the detector by traveling through <em>both</em> slits simultaneously, and the two paths interfere.</p>
                 </div>
+
                 <div class="explanation-section">
-                    <h4>Geometry Controls the Phase</h4>
-                    <p>The relative phase Δφ is set by the extra distance one path travels. When Δφ = 2πm we get bright fringes; when Δφ = (2m+1)π they cancel.</p>
+                    <h4>How Interference Works</h4>
+                    <p>Each photon can reach the detector via two routes:</p>
+                    <ul class="compact-list">
+                        <li><strong>Path A:</strong> Source → Slit A → Detector</li>
+                        <li><strong>Path B:</strong> Source → Slit B → Detector</li>
+                    </ul>
+                    <p>Each path contributes a <strong>complex amplitude</strong> (phasor/rotating arrow):</p>
+                    <div class="formula">
+                        $$\psi_A = e^{i\phi_A}, \quad \psi_B = e^{i\phi_B}$$
+                        $$\text{where } \phi = \frac{2\pi \cdot \text{path length}}{\lambda}$$
+                    </div>
+                    <p>$\lambda$ is the wavelength of light. The phase $\phi$ tells you how many wave cycles fit along the path.</p>
+                    <p><strong>Total amplitude:</strong> $\psi_{\text{total}} = \psi_A + \psi_B$ (vector sum of arrows)</p>
+                    <p><strong>Intensity (brightness):</strong> $I = |\psi_{\text{total}}|^2$ (square of the resultant arrow length)</p>
                 </div>
+
                 <div class="explanation-section">
-                    <h4>Connect Back to Action</h4>
-                    <p>The arrows you see are e<sup>iS/ℏ</sup>. Near constructive interference the action difference is tiny—exactly the stationary-action idea reused in the other tabs.</p>
+                    <h4>Bright vs Dark Fringes</h4>
+                    <p><strong>Constructive interference (bright):</strong> When the path difference $\Delta L = L_B - L_A$ equals an integer multiple of $\lambda$:</p>
+                    <div class="formula">
+                        $$\Delta L = m\lambda \quad (m = 0, \pm 1, \pm 2, \ldots)$$
+                    </div>
+                    <p>→ Phase difference $\Delta \phi = 2\pi m$ → arrows point the same direction → they add up.</p>
+                    
+                    <p><strong>Destructive interference (dark):</strong> When $\Delta L$ equals a half-integer multiple:</p>
+                    <div class="formula">
+                        $$\Delta L = \left(m + \frac{1}{2}\right)\lambda$$
+                    </div>
+                    <p>→ Phase difference $\Delta \phi = (2m+1)\pi$ → arrows point opposite directions → they cancel out.</p>
+                </div>
+
+                <div class="explanation-section">
+                    <h4>Connection to Action Principle</h4>
+                    <p>In quantum mechanics, <em>every possible path</em> contributes an amplitude $e^{iS/\hbar}$, where $S$ is the classical action for that path.</p>
+                    <p>For light, the action is proportional to path length: $S \propto L$. So the phase becomes $\phi = 2\pi L/\lambda$.</p>
+                    <p><strong>Key insight:</strong> Just like the basketball, nature "explores all paths." Paths with similar action (or phase) interfere constructively. This is why you see the classical trajectory in mechanics and interference fringes in optics—both arise from summing over all possibilities!</p>
+                </div>
+
+                <div class="explanation-section">
+                    <h4>What You're Seeing</h4>
+                    <ul class="compact-list">
+                        <li><strong>Blue pattern on screen:</strong> The interference intensity $I(y)$ as a function of vertical position.</li>
+                        <li><strong>Red & blue paths:</strong> Sample rays through slits A (red) and B (blue).</li>
+                        <li><strong>Phase arrow diagram:</strong> Vector addition of $\psi_A$ and $\psi_B$ at the current detector position. The green "Sum" arrow determines the brightness.</li>
+                        <li><strong>Expanding circles:</strong> Wavefronts propagating from the source.</li>
+                    </ul>
+                    <p><strong>Interact:</strong> Move your mouse vertically across the canvas to sweep the detector up and down. Watch the path difference and phase arrows change, causing the intensity to oscillate between bright and dark!</p>
                 </div>
             </div>
         </div>
