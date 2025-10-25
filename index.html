@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Principle of Least Action - Interactive Simulation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Visualizing the Principle of Least Action</h1>
+            <p class="subtitle">Explore how nature "chooses" paths across optics, classical mechanics, and quantum physics</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="fermat">Fermat's Principle (Optics)</button>
+            <button class="tab-button" data-tab="mechanics">Classical Mechanics (Basketball)</button>
+            <button class="tab-button" data-tab="quantum">Quantum Double-Slit</button>
+        </div>
+
+        <div class="tab-content active" id="fermat">
+            <div class="simulation-wrapper">
+                <div class="info-panel">
+                    <h2>Fermat's Principle of Least Time</h2>
+                    <p>Light travels between two points along the path that takes the least time. Drag the refraction point to see how travel time changes.</p>
+                    <div class="controls">
+                        <label>
+                            Refractive Index (n₂):
+                            <input type="range" id="refractiveIndex" min="1.0" max="2.5" step="0.1" value="1.5">
+                            <span id="refractiveIndexValue">1.5</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="showAllPaths" checked> Show Alternative Paths
+                        </label>
+                        <label>
+                            <input type="checkbox" id="showWavefronts"> Show Wavefronts
+                        </label>
+                    </div>
+                    <div class="stats">
+                        <p>Current Travel Time: <span id="optimalTime">0.00</span> ns</p>
+                        <p>Incident Angle (θ₁): <span id="angleIncidence">0.0</span>°</p>
+                        <p>Refracted Angle (θ₂): <span id="angleReflection">0.0</span>°</p>
+                    </div>
+                    <div class="guided-practice">
+                        <h3>🎯 Guided Practice</h3>
+                        <ol>
+                            <li><strong>Drag the blue dot</strong> along the boundary to change the refraction point.</li>
+                            <li><strong>Watch the graph:</strong> Find the minimum travel time on the curve.</li>
+                            <li><strong>Verify Snell's Law:</strong> Look for "✓ Snell's Law satisfied!"</li>
+                            <li><strong>Toggle wavefronts:</strong> See how light slows in water.</li>
+                            <li><strong>Adjust n₂:</strong> Change the refractive index slider.</li>
+                        </ol>
+                    </div>
+                </div>
+                <canvas id="fermatCanvas" width="800" height="600"></canvas>
+            </div>
+            <div class="physics-explanation">
+                <h3>📚 Physics Explanation: Fermat's Principle</h3>
+                
+                <div class="explanation-section">
+                    <h4>The Principle of Least Time</h4>
+                    <p>Fermat's Principle states that light traveling between two points follows the path that takes the <strong>minimum time</strong> (or more precisely, stationary time). This elegant principle explains both reflection and refraction.</p>
+                    
+                    <div class="formula">
+                        <strong>Travel Time:</strong> T = d₁/v₁ + d₂/v₂
+                    </div>
+                    
+                    <p>where d₁ and d₂ are path segments, and v₁ and v₂ are light speeds in each medium.</p>
+                </div>
+
+                <div class="explanation-section">
+                    <h4>Snell's Law from Least Time</h4>
+                    <p>For refraction between two media with refractive indices n₁ and n₂, Fermat's principle leads directly to <strong>Snell's Law</strong>:</p>
+                    
+                    <div class="formula">
+                        <strong>Snell's Law:</strong> n₁ sin(θ₁) = n₂ sin(θ₂)
+                    </div>
+                    
+                    <p>In the simulation, the <span class="highlight-green">green dashed path</span> shows this optimal route. When you drag the refraction point to minimize travel time, Snell's Law is automatically satisfied! The <span class="highlight-red">red paths</span> show suboptimal alternatives.</p>
+                    
+                    <p>The travel time graph at the bottom shows T(x) for all possible refraction points. Notice how it has a smooth minimum—this is where ∂T/∂x = 0, which mathematically derives Snell's Law.</p>
+                </div>
+
+                <div class="explanation-section">
+                    <h4>Wave Interpretation: Huygens' Principle</h4>
+                    <p>When you enable wavefronts, you see the wave nature of light. Circular wavefronts expand from the source in air (at speed c/n₁). According to <strong>Huygens' principle</strong>, each point on a wavefront acts as a source of secondary wavelets.</p>
+                    
+                    <p>When the wavefront crosses into water, it slows down (speed becomes c/n₂), causing the wavefronts to bend—this is refraction! The refracted wavelets demonstrate why only the least-time path carries energy: wavefronts from other paths arrive at different times and cancel due to destructive interference.</p>
+                </div>
+
+                <div class="explanation-section">
+                    <h4>Connection to Action Principle</h4>
+                    <p>Fermat's principle is actually a special case of the <strong>Principle of Least Action</strong>. For light, the "action" is proportional to travel time (or optical path length n·d). This connects geometrical optics to the fundamental action principle that governs all of physics.</p>
+                    
+                    <div class="formula">
+                        Optical Path Length: S = ∫ n(s) ds
+                    </div>
+                    
+                    <p>Nature extremizes this quantity, leading to Snell's law for refraction and the law of reflection.</p>
+                </div>
+
+                <div class="explanation-section">
+                    <h4>Feynman's Path Integral View</h4>
+                    <p>Richard Feynman showed that we can think of light as "trying all possible paths" simultaneously. Each path contributes a quantum amplitude with a phase φ = 2πL/λ. Paths far from the optimal one have rapidly varying phases that cancel out, while paths near the minimum time add constructively.</p>
+                    
+                    <p><em>This same reasoning applies to classical mechanics (basketball trajectories) and quantum mechanics (double-slit), unifying all three scenarios under one principle!</em></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="mechanics">
+            <div class="info-panel">
+                <h2>Classical Mechanics: Least Action Trajectory</h2>
+                <p>A basketball follows the path that extremizes the action. Drag the target point to see different trajectories.</p>
+                <div class="controls">
+                    <label>
+                        Gravity (m/s²):
+                        <input type="range" id="gravity" min="5" max="15" step="0.5" value="9.8">
+                        <span id="gravityValue">9.8</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="showAllTrajectories" checked> Show Alternative Paths
+                    </label>
+                    <label>
+                        <input type="checkbox" id="showPhasors"> Show Phase Arrows
+                    </label>
+                </div>
+                <div class="stats">
+                    <p>Action (Optimal Path): <span id="optimalAction">0.00</span> J·s</p>
+                    <p>Flight Time: <span id="flightTime">0.00</span> s</p>
+                    <p>Launch Angle: <span id="launchAngle">0.0</span>°</p>
+                </div>
+            </div>
+            <canvas id="mechanicsCanvas" width="800" height="600"></canvas>
+        </div>
+
+        <div class="tab-content" id="quantum">
+            <div class="info-panel">
+                <h2>Quantum Double-Slit: Sum Over Paths</h2>
+                <p>Particles take all possible paths. The interference pattern emerges from summing quantum amplitudes.</p>
+                <div class="controls">
+                    <label>
+                        Slit Separation (mm):
+                        <input type="range" id="slitSeparation" min="0.1" max="1.0" step="0.1" value="0.5">
+                        <span id="slitSeparationValue">0.5</span>
+                    </label>
+                    <label>
+                        Wavelength (nm):
+                        <input type="range" id="wavelength" min="400" max="700" step="10" value="550">
+                        <span id="wavelengthValue">550</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="showPaths" checked> Show Sample Paths
+                    </label>
+                    <label>
+                        <input type="checkbox" id="showArrows" checked> Show Phase Arrows
+                    </label>
+                </div>
+                <div class="stats">
+                    <p>Detector Position: <span id="detectorPos">0.0</span> mm</p>
+                    <p>Path Difference: <span id="pathDiff">0.0</span> nm</p>
+                    <p>Intensity: <span id="intensity">0.00</span></p>
+                </div>
+            </div>
+            <canvas id="quantumCanvas" width="800" height="600"></canvas>
+        </div>
+    </div>
+
+    <script src="fermat.js"></script>
+    <script src="mechanics.js"></script>
+    <script src="quantum.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
