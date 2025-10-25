@@ -1,4 +1,5 @@
 // Classical Mechanics: Least Action Trajectory Simulation
+// Following basketball.md specifications
 class MechanicsSimulation {
     constructor() {
         this.canvas = document.getElementById('mechanicsCanvas');
@@ -7,22 +8,35 @@ class MechanicsSimulation {
         
         // Simulation state
         this.start = { x: 100, y: 500 };
-        this.target = { x: 700, y: 400 };
+        this.target = { x: 700, y: 300 };
         this.dragging = false;
         this.dragOffset = { x: 0, y: 0 };
         
         // Physics parameters
         this.gravity = 9.8;
+        this.mass = 0.6; // kg
+        this.totalTime = 1.2; // seconds (fixed duration - Hamilton's principle)
+        this.hbarEff = 0.5; // Effective ℏ for phase scaling
+        this.numSegments = 50; // Path discretization
+        
+        // Visualization modes
+        this.mode = 'spray'; // 'spray', 'neighborhood', or 'heatmap'
+        this.numPaths = 30;
+        this.showActionLabels = false;
+        this.showPhasors = true;
+        this.showClassicalPath = true;
         this.showAllTrajectories = true;
-        this.showPhasors = false;
-        this.time = 0;
+        
+        // Generated paths
+        this.paths = [];
+        this.classicalPath = null;
         
         // Animation
-        this.ballPosition = null;
-        this.animationTime = 0;
-        this.animationDuration = 0;
+        this.time = 0;
+        this.ballAnimTime = 0;
         
         this.setupEventListeners();
+        this.generatePaths();
     }
 
     setupEventListeners() {
@@ -32,19 +46,77 @@ class MechanicsSimulation {
         this.canvas.addEventListener('mouseup', () => this.onMouseUp());
         this.canvas.addEventListener('mouseleave', () => this.onMouseUp());
 
-        // Control events
-        document.getElementById('gravity').addEventListener('input', (e) => {
-            this.gravity = parseFloat(e.target.value);
-            document.getElementById('gravityValue').textContent = e.target.value;
-        });
+        // Control events - check if elements exist before adding listeners
+        const gravityEl = document.getElementById('gravity');
+        if (gravityEl) {
+            gravityEl.addEventListener('input', (e) => {
+                this.gravity = parseFloat(e.target.value);
+                document.getElementById('gravityValue').textContent = e.target.value;
+                this.generatePaths();
+            });
+        }
 
-        document.getElementById('showAllTrajectories').addEventListener('change', (e) => {
-            this.showAllTrajectories = e.target.checked;
-        });
+        const totalTimeEl = document.getElementById('totalTime');
+        if (totalTimeEl) {
+            totalTimeEl.addEventListener('input', (e) => {
+                this.totalTime = parseFloat(e.target.value);
+                document.getElementById('totalTimeValue').textContent = e.target.value;
+                this.generatePaths();
+            });
+        }
 
-        document.getElementById('showPhasors').addEventListener('change', (e) => {
-            this.showPhasors = e.target.checked;
-        });
+        const hbarEffEl = document.getElementById('hbarEff');
+        if (hbarEffEl) {
+            hbarEffEl.addEventListener('input', (e) => {
+                this.hbarEff = parseFloat(e.target.value);
+                document.getElementById('hbarEffValue').textContent = e.target.value;
+            });
+        }
+
+        const numPathsEl = document.getElementById('numPaths');
+        if (numPathsEl) {
+            numPathsEl.addEventListener('input', (e) => {
+                this.numPaths = parseInt(e.target.value);
+                document.getElementById('numPathsValue').textContent = e.target.value;
+                this.generatePaths();
+            });
+        }
+
+        const pathModeEl = document.getElementById('pathMode');
+        if (pathModeEl) {
+            pathModeEl.addEventListener('change', (e) => {
+                this.mode = e.target.value;
+                this.generatePaths();
+            });
+        }
+
+        const showAllTrajectoriesEl = document.getElementById('showAllTrajectories');
+        if (showAllTrajectoriesEl) {
+            showAllTrajectoriesEl.addEventListener('change', (e) => {
+                this.showAllTrajectories = e.target.checked;
+            });
+        }
+
+        const showPhasorsEl = document.getElementById('showPhasors');
+        if (showPhasorsEl) {
+            showPhasorsEl.addEventListener('change', (e) => {
+                this.showPhasors = e.target.checked;
+            });
+        }
+
+        const showClassicalPathEl = document.getElementById('showClassicalPath');
+        if (showClassicalPathEl) {
+            showClassicalPathEl.addEventListener('change', (e) => {
+                this.showClassicalPath = e.target.checked;
+            });
+        }
+
+        const showActionLabelsEl = document.getElementById('showActionLabels');
+        if (showActionLabelsEl) {
+            showActionLabelsEl.addEventListener('change', (e) => {
+                this.showActionLabels = e.target.checked;
+            });
+        }
     }
 
     onMouseDown(e) {
@@ -53,7 +125,7 @@ class MechanicsSimulation {
         const y = e.clientY - rect.top;
         
         const dist = Math.hypot(x - this.target.x, y - this.target.y);
-        if (dist < 20) {
+        if (dist < 25) {
             this.dragging = true;
             this.dragOffset = {
                 x: x - this.target.x,
@@ -68,11 +140,12 @@ class MechanicsSimulation {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
-            this.target.x = Math.max(200, Math.min(750, x - this.dragOffset.x));
-            this.target.y = Math.max(50, Math.min(550, y - this.dragOffset.y));
+            this.target.x = Math.max(300, Math.min(750, x - this.dragOffset.x));
+            this.target.y = Math.max(50, Math.min(500, y - this.dragOffset.y));
             
-            // Reset animation
-            this.animationTime = 0;
+            // Regenerate paths
+            this.generatePaths();
+            this.ballAnimTime = 0;
         }
     }
 
@@ -80,90 +153,210 @@ class MechanicsSimulation {
         this.dragging = false;
     }
 
-    calculateTrajectory(v0, angle, steps = 100) {
-        const angleRad = angle * Math.PI / 180;
-        const vx = v0 * Math.cos(angleRad);
-        const vy = v0 * Math.sin(angleRad);
+    // Generate Bézier curve points
+    cubicBezier(p0, c1, c2, p1, t) {
+        const mt = 1 - t;
+        const mt2 = mt * mt;
+        const mt3 = mt2 * mt;
+        const t2 = t * t;
+        const t3 = t2 * t;
         
+        return {
+            x: mt3 * p0.x + 3 * mt2 * t * c1.x + 3 * mt * t2 * c2.x + t3 * p1.x,
+            y: mt3 * p0.y + 3 * mt2 * t * c1.y + 3 * mt * t2 * c2.y + t3 * p1.y
+        };
+    }
+
+    // Resample Bézier curve to uniform time steps
+    resampleBezierPath(p0, c1, c2, p1, numSegments) {
         const points = [];
-        const dt = 0.02;
-        
-        for (let i = 0; i <= steps; i++) {
-            const t = i * dt;
-            const x = this.start.x + vx * t * 50; // Scale for visualization
-            const y = this.start.y - (vy * t - 0.5 * this.gravity * t * t) * 50;
-            
-            points.push({ x, y, t });
-            
-            // Stop if trajectory goes below ground or off screen
-            if (y > this.canvas.height || x > this.canvas.width) break;
+        for (let i = 0; i <= numSegments; i++) {
+            const t = i / numSegments;
+            points.push(this.cubicBezier(p0, c1, c2, p1, t));
         }
-        
         return points;
     }
 
-    findOptimalTrajectory() {
-        // Calculate initial velocity and angle needed to reach target
-        const dx = this.target.x - this.start.x;
-        const dy = this.start.y - this.target.y; // Inverted y-axis
+    // Calculate action for a given path
+    calculateAction(points) {
+        const dt = this.totalTime / (points.length - 1);
+        let action = 0;
         
-        // Using kinematic equations for projectile motion
-        // Multiple solutions possible, we choose the lower arc
-        const g = this.gravity;
-        
-        // Simplified calculation for demonstration
-        const v0Squared = (g * dx * dx) / (2 * (dx * Math.tan(45 * Math.PI / 180) - dy));
-        const v0 = Math.sqrt(Math.abs(v0Squared)) * 2.5; // Scale factor for visualization
-        
-        // Calculate launch angle
-        let angle = Math.atan2(dy * 2, dx) * 180 / Math.PI;
-        if (angle < 0) angle += 90;
-        
-        // Find best trajectory through iteration
-        let bestTrajectory = null;
-        let minError = Infinity;
-        
-        for (let testAngle = 20; testAngle <= 80; testAngle += 0.5) {
-            const trajectory = this.calculateTrajectory(v0, testAngle);
+        for (let i = 0; i < points.length - 1; i++) {
+            const p1 = points[i];
+            const p2 = points[i + 1];
             
-            // Find closest point to target
-            for (const point of trajectory) {
-                const error = Math.hypot(point.x - this.target.x, point.y - this.target.y);
-                if (error < minError) {
-                    minError = error;
-                    bestTrajectory = { trajectory, angle: testAngle, v0 };
+            // Velocity (in canvas units/s - scale appropriately)
+            const vx = (p2.x - p1.x) / dt;
+            const vy = (p1.y - p2.y) / dt; // Inverted y-axis
+            const v2 = vx * vx + vy * vy;
+            
+            // Average height (convert canvas y to physical height)
+            const ybar = ((this.canvas.height - p1.y) + (this.canvas.height - p2.y)) / 2 / 50; // Scale to meters
+            
+            // Lagrangian: L = T - V = (1/2)mv² - mgy
+            const L = 0.5 * this.mass * (v2 / 2500) - this.mass * this.gravity * ybar;
+            
+            action += L * dt;
+        }
+        
+        return action;
+    }
+
+    // Find classical path using parabola
+    findClassicalPath() {
+        const dx = this.target.x - this.start.x;
+        const dy = this.start.y - this.target.y;
+        const T = this.totalTime;
+        
+        // Initial velocity components for parabolic trajectory
+        const vx0 = dx / T;
+        const vy0 = (dy + 0.5 * this.gravity * T * T) / T;
+        
+        const points = [];
+        for (let i = 0; i <= this.numSegments; i++) {
+            const t = (i / this.numSegments) * T;
+            const x = this.start.x + vx0 * t;
+            const y = this.start.y - (vy0 * t - 0.5 * this.gravity * t * t);
+            points.push({ x, y });
+        }
+        
+        return {
+            points,
+            action: this.calculateAction(points),
+            phase: this.calculateAction(points) / this.hbarEff,
+            isClassical: true
+        };
+    }
+
+    // Generate random control points for Bézier paths
+    generateRandomControlPoints() {
+        const dx = this.target.x - this.start.x;
+        
+        // Control point 1
+        const c1 = {
+            x: this.start.x + dx * (0.2 + Math.random() * 0.3),
+            y: this.start.y - 50 - Math.random() * 300
+        };
+        
+        // Control point 2
+        const c2 = {
+            x: this.start.x + dx * (0.5 + Math.random() * 0.3),
+            y: this.start.y - 50 - Math.random() * 300
+        };
+        
+        return { c1, c2 };
+    }
+
+    // Generate control points near classical path
+    generateNearbyControlPoints(sigma = 30) {
+        // Start from classical control points (approximate parabola)
+        const dx = this.target.x - this.start.x;
+        const dy = this.start.y - this.target.y;
+        
+        const classicalC1 = {
+            x: this.start.x + dx * 0.33,
+            y: this.start.y - dy * 0.8 - 100
+        };
+        
+        const classicalC2 = {
+            x: this.start.x + dx * 0.67,
+            y: this.start.y - dy * 0.8 - 100
+        };
+        
+        // Add Gaussian noise
+        const c1 = {
+            x: classicalC1.x + (Math.random() - 0.5) * sigma * 2,
+            y: classicalC1.y + (Math.random() - 0.5) * sigma
+        };
+        
+        const c2 = {
+            x: classicalC2.x + (Math.random() - 0.5) * sigma * 2,
+            y: classicalC2.y + (Math.random() - 0.5) * sigma
+        };
+        
+        return { c1, c2 };
+    }
+
+    // Generate paths based on current mode
+    generatePaths() {
+        this.paths = [];
+        
+        // Always calculate classical path
+        this.classicalPath = this.findClassicalPath();
+        
+        if (this.mode === 'spray') {
+            // Generate diverse random paths
+            for (let i = 0; i < this.numPaths; i++) {
+                const { c1, c2 } = this.generateRandomControlPoints();
+                const points = this.resampleBezierPath(this.start, c1, c2, this.target, this.numSegments);
+                const action = this.calculateAction(points);
+                const phase = action / this.hbarEff;
+                
+                this.paths.push({ points, action, phase, c1, c2 });
+            }
+        } else if (this.mode === 'neighborhood') {
+            // Generate paths near classical path
+            for (let i = 0; i < this.numPaths; i++) {
+                const sigma = 20 + i * 3; // Increasing deviation
+                const { c1, c2 } = this.generateNearbyControlPoints(sigma);
+                const points = this.resampleBezierPath(this.start, c1, c2, this.target, this.numSegments);
+                const action = this.calculateAction(points);
+                const phase = action / this.hbarEff;
+                
+                this.paths.push({ points, action, phase, c1, c2, deviation: sigma });
+            }
+        } else if (this.mode === 'heatmap') {
+            // Generate grid of paths
+            const gridSize = Math.floor(Math.sqrt(this.numPaths));
+            const dx = this.target.x - this.start.x;
+            
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const c1 = {
+                        x: this.start.x + dx * (0.15 + i / gridSize * 0.4),
+                        y: this.start.y - 50 - j / gridSize * 300
+                    };
+                    
+                    const c2 = {
+                        x: this.start.x + dx * (0.45 + i / gridSize * 0.4),
+                        y: this.start.y - 50 - j / gridSize * 300
+                    };
+                    
+                    const points = this.resampleBezierPath(this.start, c1, c2, this.target, this.numSegments);
+                    const action = this.calculateAction(points);
+                    const phase = action / this.hbarEff;
+                    
+                    this.paths.push({ points, action, phase, c1, c2, gridI: i, gridJ: j });
                 }
             }
         }
         
-        return bestTrajectory;
+        // Sort by action for easier identification
+        this.paths.sort((a, b) => a.action - b.action);
     }
 
-    calculateAction(trajectory) {
-        // Action S = ∫(T - V)dt where T is kinetic energy and V is potential energy
-        // For projectile: S = ∫(½mv² - mgy)dt
-        // Simplified calculation for demonstration
-        let action = 0;
-        const m = 1; // mass = 1 kg
+    // Calculate phasor sum
+    calculatePhasorSum() {
+        let re = 0, im = 0;
         
-        for (let i = 1; i < trajectory.length; i++) {
-            const p1 = trajectory[i - 1];
-            const p2 = trajectory[i];
-            const dt = p2.t - p1.t;
-            
-            // Kinetic energy (approximate from position change)
-            const vx = (p2.x - p1.x) / dt / 50;
-            const vy = (p1.y - p2.y) / dt / 50; // Inverted y
-            const T = 0.5 * m * (vx * vx + vy * vy);
-            
-            // Potential energy
-            const y = (this.canvas.height - p2.y) / 50; // Convert to meters
-            const V = m * this.gravity * y;
-            
-            action += (T - V) * dt;
+        for (const path of this.paths) {
+            re += Math.cos(path.phase);
+            im += Math.sin(path.phase);
         }
         
-        return action;
+        // Include classical path
+        if (this.classicalPath) {
+            re += Math.cos(this.classicalPath.phase);
+            im += Math.sin(this.classicalPath.phase);
+        }
+        
+        return {
+            re,
+            im,
+            magnitude: Math.hypot(re, im),
+            angle: Math.atan2(im, re)
+        };
     }
 
     draw() {
@@ -172,130 +365,124 @@ class MechanicsSimulation {
         const height = this.canvas.height;
         
         // Clear canvas
-        ctx.fillStyle = '#fafafa';
+        ctx.fillStyle = '#f5f5f5';
         ctx.fillRect(0, 0, width, height);
         
-        // Draw ground
-        ctx.fillStyle = '#8bc34a';
-        ctx.fillRect(0, 520, width, 80);
+        // Draw court/background
+        ctx.fillStyle = 'rgba(139, 195, 74, 0.1)';
+        ctx.fillRect(0, height - 100, width, 100);
         
-        // Find optimal trajectory
-        const optimal = this.findOptimalTrajectory();
+        // Draw ground line
+        ctx.strokeStyle = '#8bc34a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, height - 100);
+        ctx.lineTo(width, height - 100);
+        ctx.stroke();
         
-        if (!optimal) return;
+        // Find min/max actions for color scaling
+        let minAction = this.classicalPath ? this.classicalPath.action : Infinity;
+        let maxAction = -Infinity;
         
-        // Draw alternative trajectories if enabled
-        if (this.showAllTrajectories) {
-            for (let angleOffset = -30; angleOffset <= 30; angleOffset += 10) {
-                if (angleOffset === 0) continue;
+        for (const path of this.paths) {
+            minAction = Math.min(minAction, path.action);
+            maxAction = Math.max(maxAction, path.action);
+        }
+        
+        // Draw alternative paths if enabled
+        if (this.showAllTrajectories && this.paths.length > 0) {
+            for (const path of this.paths) {
+                // Color based on action (cooler = lower S, warmer = higher S)
+                const actionRatio = (path.action - minAction) / (maxAction - minAction + 0.1);
+                const hue = 240 - actionRatio * 120; // Blue to red
+                const alpha = 0.3;
                 
-                const testAngle = optimal.angle + angleOffset;
-                const trajectory = this.calculateTrajectory(optimal.v0, testAngle);
-                const action = this.calculateAction(trajectory);
-                
-                ctx.strokeStyle = 'rgba(200, 100, 100, 0.2)';
-                ctx.lineWidth = 1;
+                ctx.strokeStyle = `hsla(${hue}, 70%, 50%, ${alpha})`;
+                ctx.lineWidth = 1.5;
                 ctx.beginPath();
                 
-                for (let i = 0; i < trajectory.length; i++) {
-                    const p = trajectory[i];
+                for (let i = 0; i < path.points.length; i++) {
+                    const p = path.points[i];
                     if (i === 0) ctx.moveTo(p.x, p.y);
                     else ctx.lineTo(p.x, p.y);
                 }
                 ctx.stroke();
                 
-                // Draw phasor if enabled
-                if (this.showPhasors && trajectory.length > 0) {
-                    const endPoint = trajectory[trajectory.length - 1];
-                    const phase = action * 0.1; // Scaled phase
-                    const arrowLen = 30;
-                    const arrowX = endPoint.x + arrowLen * Math.cos(phase);
-                    const arrowY = endPoint.y + arrowLen * Math.sin(phase);
-                    
-                    ctx.strokeStyle = 'rgba(200, 100, 100, 0.4)';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(endPoint.x, endPoint.y);
-                    ctx.lineTo(arrowX, arrowY);
-                    ctx.stroke();
-                    
-                    // Arrowhead
-                    const angle = Math.atan2(arrowY - endPoint.y, arrowX - endPoint.x);
-                    ctx.beginPath();
-                    ctx.moveTo(arrowX, arrowY);
-                    ctx.lineTo(arrowX - 8 * Math.cos(angle - 0.3), arrowY - 8 * Math.sin(angle - 0.3));
-                    ctx.lineTo(arrowX - 8 * Math.cos(angle + 0.3), arrowY - 8 * Math.sin(angle + 0.3));
-                    ctx.closePath();
-                    ctx.fillStyle = 'rgba(200, 100, 100, 0.4)';
-                    ctx.fill();
+                // Show action labels if enabled
+                if (this.showActionLabels && path.points.length > 0) {
+                    const midPoint = path.points[Math.floor(path.points.length / 2)];
+                    ctx.fillStyle = `hsla(${hue}, 70%, 40%, 0.8)`;
+                    ctx.font = '9px Arial';
+                    ctx.fillText(`S=${path.action.toFixed(1)}`, midPoint.x - 20, midPoint.y - 5);
                 }
             }
         }
         
-        // Draw optimal trajectory
-        ctx.strokeStyle = '#667eea';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        
-        for (let i = 0; i < optimal.trajectory.length; i++) {
-            const p = optimal.trajectory[i];
-            if (i === 0) ctx.moveTo(p.x, p.y);
-            else ctx.lineTo(p.x, p.y);
-        }
-        ctx.stroke();
-        
-        // Draw optimal phasor
-        if (this.showPhasors && optimal.trajectory.length > 0) {
-            const action = this.calculateAction(optimal.trajectory);
-            const endPoint = optimal.trajectory[optimal.trajectory.length - 1];
-            const phase = action * 0.1;
-            const arrowLen = 40;
-            const arrowX = endPoint.x + arrowLen * Math.cos(phase);
-            const arrowY = endPoint.y + arrowLen * Math.sin(phase);
-            
-            ctx.strokeStyle = '#667eea';
-            ctx.lineWidth = 3;
+        // Draw classical path
+        if (this.showClassicalPath && this.classicalPath) {
+            ctx.strokeStyle = '#4caf50';
+            ctx.lineWidth = 4;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(76, 175, 80, 0.5)';
+            ctx.setLineDash([8, 4]);
             ctx.beginPath();
-            ctx.moveTo(endPoint.x, endPoint.y);
-            ctx.lineTo(arrowX, arrowY);
+            
+            for (let i = 0; i < this.classicalPath.points.length; i++) {
+                const p = this.classicalPath.points[i];
+                if (i === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            }
             ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.shadowBlur = 0;
             
-            const angle = Math.atan2(arrowY - endPoint.y, arrowX - endPoint.x);
-            ctx.beginPath();
-            ctx.moveTo(arrowX, arrowY);
-            ctx.lineTo(arrowX - 10 * Math.cos(angle - 0.3), arrowY - 10 * Math.sin(angle - 0.3));
-            ctx.lineTo(arrowX - 10 * Math.cos(angle + 0.3), arrowY - 10 * Math.sin(angle + 0.3));
-            ctx.closePath();
-            ctx.fillStyle = '#667eea';
-            ctx.fill();
+            // Label
+            const midPoint = this.classicalPath.points[Math.floor(this.classicalPath.points.length / 2)];
+            ctx.fillStyle = '#2e7d32';
+            ctx.font = 'bold 11px Arial';
+            ctx.fillText(`Classical: S=${this.classicalPath.action.toFixed(1)}`, midPoint.x - 50, midPoint.y - 15);
         }
         
-        // Animate ball along optimal trajectory
-        this.animationDuration = optimal.trajectory[optimal.trajectory.length - 1].t;
-        const progress = (this.animationTime % (this.animationDuration + 1)) / this.animationDuration;
-        const ballIndex = Math.floor(progress * (optimal.trajectory.length - 1));
+        // Draw phasors if enabled
+        if (this.showPhasors) {
+            this.drawPhasorDiagram(ctx);
+        }
         
-        if (ballIndex < optimal.trajectory.length) {
-            this.ballPosition = optimal.trajectory[ballIndex];
-            
-            // Draw ball
-            ctx.fillStyle = '#ff6b6b';
-            ctx.beginPath();
-            ctx.arc(this.ballPosition.x, this.ballPosition.y, 15, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+        // Animate ball along classical path
+        if (this.classicalPath) {
+            const progress = (this.ballAnimTime % (this.totalTime + 0.5)) / this.totalTime;
+            if (progress <= 1) {
+                const ballIndex = Math.floor(progress * (this.classicalPath.points.length - 1));
+                const ballPos = this.classicalPath.points[Math.min(ballIndex, this.classicalPath.points.length - 1)];
+                
+                // Draw ball
+                ctx.fillStyle = '#ff6b6b';
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = 'rgba(255, 107, 107, 0.6)';
+                ctx.beginPath();
+                ctx.arc(ballPos.x, ballPos.y, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                
+                // Ball outline
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
         }
         
         // Draw start point (shooter)
         ctx.fillStyle = '#333';
-        ctx.fillRect(this.start.x - 15, this.start.y - 40, 10, 40);
-        ctx.fillRect(this.start.x - 20, this.start.y - 50, 20, 15);
+        ctx.beginPath();
+        ctx.arc(this.start.x, this.start.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#666';
+        ctx.font = 'bold 12px Arial';
+        ctx.fillText('Shooter', this.start.x - 25, this.start.y + 25);
         
         // Draw target (hoop)
         ctx.strokeStyle = '#ff9800';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 5;
         ctx.beginPath();
         ctx.arc(this.target.x, this.target.y, 20, 0, Math.PI * 2);
         ctx.stroke();
@@ -304,19 +491,114 @@ class MechanicsSimulation {
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(this.target.x, this.target.y - 20);
-        ctx.lineTo(this.target.x, this.target.y + 40);
+        ctx.lineTo(this.target.x, this.target.y + 30);
         ctx.stroke();
         
+        ctx.fillStyle = '#e65100';
+        ctx.font = 'bold 12px Arial';
+        ctx.fillText('Hoop', this.target.x - 15, this.target.y + 45);
+        
         // Update stats
-        const action = this.calculateAction(optimal.trajectory);
-        document.getElementById('optimalAction').textContent = action.toFixed(2);
-        document.getElementById('flightTime').textContent = this.animationDuration.toFixed(2);
-        document.getElementById('launchAngle').textContent = optimal.angle.toFixed(1);
+        const phasorSum = this.calculatePhasorSum();
+        document.getElementById('optimalAction').textContent = this.classicalPath ? this.classicalPath.action.toFixed(2) : '0.00';
+        document.getElementById('flightTime').textContent = this.totalTime.toFixed(2);
+        document.getElementById('phasorMagnitude').textContent = phasorSum.magnitude.toFixed(2);
+    }
+
+    drawPhasorDiagram(ctx) {
+        const phasorX = 650;
+        const phasorY = 80;
+        const phasorRadius = 60;
+        
+        // Background panel
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 2;
+        ctx.fillRect(phasorX - 70, phasorY - 70, 140, 180);
+        ctx.strokeRect(phasorX - 70, phasorY - 70, 140, 180);
+        
+        // Title
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 11px Arial';
+        ctx.fillText('Phase Diagram', phasorX - 60, phasorY - 55);
+        
+        // Draw circle
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(phasorX, phasorY, phasorRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Draw axes
+        ctx.strokeStyle = '#ccc';
+        ctx.beginPath();
+        ctx.moveTo(phasorX - phasorRadius - 5, phasorY);
+        ctx.lineTo(phasorX + phasorRadius + 5, phasorY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(phasorX, phasorY - phasorRadius - 5);
+        ctx.lineTo(phasorX, phasorY + phasorRadius + 5);
+        ctx.stroke();
+        
+        // Draw individual phasors (sample some to avoid clutter)
+        const sampleSize = Math.min(15, this.paths.length);
+        const step = Math.max(1, Math.floor(this.paths.length / sampleSize));
+        
+        let re = 0, im = 0;
+        
+        for (let i = 0; i < this.paths.length; i += step) {
+            const path = this.paths[i];
+            const arrowLen = 15;
+            const arrowX = phasorX + arrowLen * Math.cos(path.phase);
+            const arrowY = phasorY + arrowLen * Math.sin(path.phase);
+            
+            ctx.strokeStyle = 'rgba(200, 100, 100, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(phasorX + re * 15, phasorY + im * 15);
+            ctx.lineTo(phasorX + re * 15 + arrowLen * Math.cos(path.phase), 
+                       phasorY + im * 15 + arrowLen * Math.sin(path.phase));
+            ctx.stroke();
+            
+            re += Math.cos(path.phase);
+            im += Math.sin(path.phase);
+        }
+        
+        // Draw sum vector
+        const sumLen = Math.hypot(re, im);
+        const sumAngle = Math.atan2(im, re);
+        const scale = Math.min(1, phasorRadius / (sumLen * 1.5));
+        
+        ctx.strokeStyle = '#4caf50';
+        ctx.fillStyle = '#4caf50';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(phasorX, phasorY);
+        ctx.lineTo(phasorX + re * 15 * scale, phasorY + im * 15 * scale);
+        ctx.stroke();
+        
+        // Arrowhead
+        const headLen = 8;
+        const headAngle = sumAngle;
+        ctx.beginPath();
+        ctx.moveTo(phasorX + re * 15 * scale, phasorY + im * 15 * scale);
+        ctx.lineTo(phasorX + re * 15 * scale - headLen * Math.cos(headAngle - 0.3),
+                   phasorY + im * 15 * scale - headLen * Math.sin(headAngle - 0.3));
+        ctx.lineTo(phasorX + re * 15 * scale - headLen * Math.cos(headAngle + 0.3),
+                   phasorY + im * 15 * scale - headLen * Math.sin(headAngle + 0.3));
+        ctx.closePath();
+        ctx.fill();
+        
+        // Label
+        ctx.fillStyle = '#2e7d32';
+        ctx.font = '10px Arial';
+        ctx.fillText('∑ e^(iS/ℏ)', phasorX - 30, phasorY + 80);
+        ctx.fillText(`|Σ| = ${sumLen.toFixed(1)}`, phasorX - 30, phasorY + 95);
     }
 
     start() {
         this.running = true;
-        this.animationTime = 0;
+        this.ballAnimTime = 0;
         this.animate();
     }
 
@@ -330,7 +612,8 @@ class MechanicsSimulation {
     animate() {
         if (!this.running) return;
         
-        this.animationTime += 0.02;
+        this.time += 0.016;
+        this.ballAnimTime += 0.016;
         this.draw();
         this.animationFrame = requestAnimationFrame(() => this.animate());
     }

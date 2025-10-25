@@ -110,29 +110,121 @@
         </div>
 
         <div class="tab-content" id="mechanics">
-            <div class="info-panel">
-                <h2>Classical Mechanics: Least Action Trajectory</h2>
-                <p>A basketball follows the path that extremizes the action. Drag the target point to see different trajectories.</p>
-                <div class="controls">
-                    <label>
-                        Gravity (m/s²):
-                        <input type="range" id="gravity" min="5" max="15" step="0.5" value="9.8">
-                        <span id="gravityValue">9.8</span>
-                    </label>
-                    <label>
-                        <input type="checkbox" id="showAllTrajectories" checked> Show Alternative Paths
-                    </label>
-                    <label>
-                        <input type="checkbox" id="showPhasors"> Show Phase Arrows
-                    </label>
+            <div class="simulation-wrapper">
+                <div class="info-panel">
+                    <h2>Classical Mechanics: Least Action</h2>
+                    <p>A basketball follows the path that extremizes the action. Multiple paths are possible, but only one survives!</p>
+                    <div class="controls">
+                        <label>
+                            Path Mode:
+                            <select id="pathMode">
+                                <option value="spray">Spray (All Paths)</option>
+                                <option value="neighborhood">Neighborhood</option>
+                                <option value="heatmap">Heatmap</option>
+                            </select>
+                        </label>
+                        <label>
+                            Number of Paths:
+                            <input type="range" id="numPaths" min="10" max="50" step="5" value="30">
+                            <span id="numPathsValue">30</span>
+                        </label>
+                        <label>
+                            Total Time T (s):
+                            <input type="range" id="totalTime" min="0.5" max="2.5" step="0.1" value="1.2">
+                            <span id="totalTimeValue">1.2</span>
+                        </label>
+                        <label>
+                            Effective ℏ:
+                            <input type="range" id="hbarEff" min="0.1" max="2.0" step="0.1" value="0.5">
+                            <span id="hbarEffValue">0.5</span>
+                        </label>
+                        <label>
+                            Gravity (m/s²):
+                            <input type="range" id="gravity" min="5" max="15" step="0.5" value="9.8">
+                            <span id="gravityValue">9.8</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="showAllTrajectories" checked> Show All Paths
+                        </label>
+                        <label>
+                            <input type="checkbox" id="showPhasors" checked> Show Phasors
+                        </label>
+                        <label>
+                            <input type="checkbox" id="showClassicalPath" checked> Show Classical Path
+                        </label>
+                        <label>
+                            <input type="checkbox" id="showActionLabels"> Show Action Labels
+                        </label>
+                    </div>
+                    <div class="stats">
+                        <p>Classical Action: <span id="optimalAction">0.00</span> J·s</p>
+                        <p>Flight Time: <span id="flightTime">0.00</span> s</p>
+                        <p>Phasor Sum |Σ|: <span id="phasorMagnitude">0.00</span></p>
+                    </div>
+                    <div class="guided-practice">
+                        <h3>🎯 Guided Practice</h3>
+                        <ol>
+                            <li><strong>Spray Mode:</strong> See many possible paths. Classical path glows green.</li>
+                            <li><strong>Watch phasors:</strong> Paths add as vectors. Only near-classical paths align!</li>
+                            <li><strong>Adjust ℏ:</strong> Lower = sharper classical dominance.</li>
+                            <li><strong>Neighborhood Mode:</strong> See how paths near classical add constructively.</li>
+                            <li><strong>Drag the hoop:</strong> Watch how the classical path adapts.</li>
+                        </ol>
+                    </div>
                 </div>
-                <div class="stats">
-                    <p>Action (Optimal Path): <span id="optimalAction">0.00</span> J·s</p>
-                    <p>Flight Time: <span id="flightTime">0.00</span> s</p>
-                    <p>Launch Angle: <span id="launchAngle">0.0</span>°</p>
+                <canvas id="mechanicsCanvas" width="800" height="600"></canvas>
+            </div>
+            <div class="physics-explanation">
+                <h3>📚 Physics Explanation: Hamilton's Principle & Sum Over Paths</h3>
+                
+                <div class="explanation-section">
+                    <h4>The Principle of Stationary Action</h4>
+                    <p>For a particle moving from point A to point B in a fixed time T, the actual path is the one that makes the <strong>action</strong> stationary (usually a minimum). The action is:</p>
+                    
+                    <div class="formula">
+                        <strong>Action:</strong> S = ∫₀ᵀ (T - V) dt = ∫₀ᵀ (½mv² - mgy) dt
+                    </div>
+                    
+                    <p>where T is kinetic energy and V is potential energy. This is <strong>Hamilton's Principle</strong>, the foundation of classical mechanics.</p>
+                </div>
+
+                <div class="explanation-section">
+                    <h4>Why the Classical Path Dominates</h4>
+                    <p>Imagine the ball "trying" all possible paths. In quantum mechanics (Feynman's path integral), each path contributes an amplitude:</p>
+                    
+                    <div class="formula">
+                        <strong>Amplitude per path:</strong> e^(iS/ℏ)
+                    </div>
+                    
+                    <p>Paths with similar action have similar phases → <strong>constructive interference</strong>. Paths far from the stationary action have rapidly varying phases → <strong>destructive interference</strong>. The classical path sits where ∂S/∂path = 0, so nearby paths all contribute in phase!</p>
+                </div>
+
+                <div class="explanation-section">
+                    <h4>The Phase Diagram Visualization</h4>
+                    <p>The phasor diagram shows vectors e^(iS/ℏ) for each path. When you sum them tip-to-tail:</p>
+                    <ul>
+                        <li><strong>Near classical path:</strong> Phasors point roughly the same direction → large sum</li>
+                        <li><strong>Far from classical:</strong> Phasors point randomly → cancel out</li>
+                        <li><strong>Lower ℏ_eff:</strong> Phases rotate faster → only classical path survives (macroscopic limit)</li>
+                    </ul>
+                </div>
+
+                <div class="explanation-section">
+                    <h4>Three Visualization Modes</h4>
+                    <p><strong>Spray Mode:</strong> Shows diverse paths (loops, zig-zags). Color indicates action (blue = low, red = high). The classical path is the greenest!</p>
+                    
+                    <p><strong>Neighborhood Mode:</strong> Paths near the classical trajectory. Watch how the phasor sum grows as you add paths close to the classical one.</p>
+                    
+                    <p><strong>Heatmap Mode:</strong> Grid of paths showing the "action landscape." The classical path sits in the valley.</p>
+                </div>
+
+                <div class="explanation-section">
+                    <h4>From Quantum to Classical</h4>
+                    <p>This simulation bridges quantum and classical physics! For a macroscopic basketball, ℏ is so tiny that only the classical path contributes. But the <em>principle</em> is the same: nature sums over all possibilities, and stationary action dominates.</p>
+                    
+                    <p>This is Feynman's profound insight: <strong>classical mechanics emerges from quantum mechanics via stationary phase</strong>.</p>
                 </div>
             </div>
-            <canvas id="mechanicsCanvas" width="800" height="600"></canvas>
         </div>
 
         <div class="tab-content" id="quantum">
