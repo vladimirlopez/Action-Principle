@@ -38,6 +38,18 @@ class MechanicsSimulation {
         this.ballAnimTime = 0;
         
         this.setupEventListeners();
+
+        this.baseWidth = this.canvas.width;
+        this.baseHeight = this.canvas.height;
+        this.displayWidth = this.baseWidth;
+        this.displayHeight = this.baseHeight;
+        this.scaleX = 1;
+        this.scaleY = 1;
+        this.pixelRatio = window.devicePixelRatio || 1;
+
+        this.resizeObserver = new ResizeObserver(() => this.updateCanvasMetrics());
+        this.resizeObserver.observe(this.canvas);
+        this.updateCanvasMetrics();
     }
 
     setupEventListeners() {
@@ -103,10 +115,45 @@ class MechanicsSimulation {
         }
     }
 
-    onMouseDown(e) {
+    updateCanvasMetrics() {
         const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        if (!rect.width || !rect.height) {
+            return;
+        }
+
+        const dpr = window.devicePixelRatio || 1;
+        this.displayWidth = rect.width;
+        this.displayHeight = rect.height;
+        this.scaleX = rect.width / this.baseWidth;
+        this.scaleY = rect.height / this.baseHeight;
+
+        const targetWidth = Math.round(rect.width * dpr);
+        const targetHeight = Math.round(rect.height * dpr);
+
+        if (this.canvas.width !== targetWidth || this.canvas.height !== targetHeight) {
+            this.canvas.width = targetWidth;
+            this.canvas.height = targetHeight;
+        }
+
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.scale(this.scaleX * dpr, this.scaleY * dpr);
+        this.pixelRatio = dpr;
+    }
+
+    toBaseCoordinates(event) {
+        const rect = this.canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) {
+            return { x: 0, y: 0 };
+        }
+
+        return {
+            x: ((event.clientX - rect.left) * this.baseWidth) / rect.width,
+            y: ((event.clientY - rect.top) * this.baseHeight) / rect.height
+        };
+    }
+
+    onMouseDown(e) {
+        const { x, y } = this.toBaseCoordinates(e);
 
         const dist = Math.hypot(x - this.target.x, y - this.target.y);
         if (dist < 25) {
@@ -120,9 +167,7 @@ class MechanicsSimulation {
 
     onMouseMove(e) {
         if (this.dragging) {
-            const rect = this.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const { x, y } = this.toBaseCoordinates(e);
             
             this.target.x = Math.max(300, Math.min(750, x - this.dragOffset.x));
             this.target.y = Math.max(50, Math.min(500, y - this.dragOffset.y));
@@ -178,7 +223,7 @@ class MechanicsSimulation {
     calculateAction(points) {
         const dt = this.totalTime / (points.length - 1);
         const scale = this.pixelScale;
-        const canvasHeight = this.canvas.height;
+    const canvasHeight = this.baseHeight;
         let action = 0;
         
         for (let i = 0; i < points.length - 1; i++) {
@@ -209,7 +254,7 @@ class MechanicsSimulation {
     // Find classical path using parabola
     findClassicalPath() {
     const scale = this.pixelScale;
-    const canvasHeight = this.canvas.height;
+    const canvasHeight = this.baseHeight;
 
         // Convert endpoints to physical coordinates (meters)
         const x0 = this.startPoint.x / scale;
@@ -400,27 +445,25 @@ class MechanicsSimulation {
 
     draw() {
         const ctx = this.ctx;
-        const width = this.canvas.width;
-        const height = this.canvas.height;
+        this.updateCanvasMetrics();
+        const width = this.baseWidth;
+        const height = this.baseHeight;
         
-        // Clear canvas with gradient background
-        const gradient = ctx.createLinearGradient(0, 0, 0, height);
-        gradient.addColorStop(0, '#f8f9fc');
-        gradient.addColorStop(1, '#ffffff');
-        ctx.fillStyle = gradient;
+    // Clean white background
+    ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
         
-        // Draw court/background with better styling
-        ctx.fillStyle = 'rgba(139, 195, 74, 0.08)';
-        ctx.fillRect(0, height - 100, width, 100);
+    // Draw simple court base
+    ctx.fillStyle = 'rgba(139, 195, 74, 0.15)';
+    ctx.fillRect(0, height - 90, width, 90);
         
-        // Draw ground line
-        ctx.strokeStyle = '#8bc34a';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([10, 5]);
+    // Baseline
+    ctx.strokeStyle = '#8bc34a';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
         ctx.beginPath();
-        ctx.moveTo(0, height - 100);
-        ctx.lineTo(width, height - 100);
+    ctx.moveTo(0, height - 90);
+    ctx.lineTo(width, height - 90);
         ctx.stroke();
         ctx.setLineDash([]);
         
@@ -434,15 +477,15 @@ class MechanicsSimulation {
         }
         
         // Draw alternative paths if enabled
-        if (this.showAllTrajectories && this.paths.length > 0) {
+    if (this.showAllTrajectories && this.paths.length > 0) {
             for (const path of this.paths) {
                 // Color based on action (cooler = lower S, warmer = higher S)
                 const actionRatio = (path.action - minAction) / (maxAction - minAction + 0.1);
-                const hue = 220 - actionRatio * 100; // Blue to orange
-                const alpha = 0.25;
+        const hue = 210 - actionRatio * 80;
+        const alpha = 0.18;
                 
                 ctx.strokeStyle = `hsla(${hue}, 65%, 55%, ${alpha})`;
-                ctx.lineWidth = 1.2;
+        ctx.lineWidth = 1;
                 ctx.beginPath();
                 
                 for (let i = 0; i < path.points.length; i++) {
@@ -456,24 +499,9 @@ class MechanicsSimulation {
         
         // Draw classical path with better visibility
         if (this.showClassicalPath && this.classicalPath) {
-            // Draw white outline first for contrast
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 6;
-            ctx.setLineDash([10, 5]);
-            ctx.beginPath();
-            
-            for (let i = 0; i < this.classicalPath.points.length; i++) {
-                const p = this.classicalPath.points[i];
-                if (i === 0) ctx.moveTo(p.x, p.y);
-                else ctx.lineTo(p.x, p.y);
-            }
-            ctx.stroke();
-            
-            // Draw colored path on top
             ctx.strokeStyle = '#2e7d32';
-            ctx.lineWidth = 3.5;
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = 'rgba(76, 175, 80, 0.6)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([8, 4]);
             ctx.beginPath();
             
             for (let i = 0; i < this.classicalPath.points.length; i++) {
@@ -483,7 +511,6 @@ class MechanicsSimulation {
             }
             ctx.stroke();
             ctx.setLineDash([]);
-            ctx.shadowBlur = 0;
         }
         
         // Draw phasors if enabled
@@ -514,68 +541,27 @@ class MechanicsSimulation {
             }
         }
         
-        // Draw start point (shooter) with better styling
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(this.startPoint.x, this.startPoint.y, 10, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        
+        // Draw start point (shooter)
         ctx.fillStyle = '#333';
         ctx.beginPath();
-        ctx.arc(this.startPoint.x, this.startPoint.y, 5, 0, Math.PI * 2);
+        ctx.arc(this.startPoint.x, this.startPoint.y, 8, 0, Math.PI * 2);
         ctx.fill();
-        
         ctx.fillStyle = '#555';
-        ctx.font = 'bold 13px Arial';
+        ctx.font = '12px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('Start', this.startPoint.x, this.startPoint.y + 28);
+        ctx.fillText('Start', this.startPoint.x, this.startPoint.y + 24);
         ctx.textAlign = 'left';
-        
-        // Draw target (hoop) with better styling
-        // Backboard
-        ctx.fillStyle = 'rgba(255, 152, 0, 0.1)';
-        ctx.fillRect(this.target.x - 3, this.target.y - 35, 6, 50);
-        
-        ctx.strokeStyle = '#e65100';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(this.target.x - 3, this.target.y - 35, 6, 50);
-        
-        // Hoop rim
-        ctx.strokeStyle = '#ff6f00';
-        ctx.lineWidth = 5;
-        ctx.shadowBlur = 4;
-        ctx.shadowColor = 'rgba(255, 152, 0, 0.4)';
-        ctx.beginPath();
-        ctx.arc(this.target.x, this.target.y, 22, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-        
-        // Inner circle
-        ctx.strokeStyle = '#ff8f00';
-        ctx.lineWidth = 2;
+
+        // Draw target (hoop)
+        ctx.strokeStyle = '#ff9800';
+        ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.arc(this.target.x, this.target.y, 18, 0, Math.PI * 2);
         ctx.stroke();
-        
-        // Net suggestion
-        ctx.strokeStyle = 'rgba(255, 152, 0, 0.3)';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            ctx.beginPath();
-            ctx.moveTo(this.target.x + 18 * Math.cos(angle), this.target.y + 18 * Math.sin(angle));
-            ctx.lineTo(this.target.x, this.target.y + 35);
-            ctx.stroke();
-        }
-        
         ctx.fillStyle = '#e65100';
-        ctx.font = 'bold 13px Arial';
+        ctx.font = '12px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('Hoop', this.target.x, this.target.y + 55);
+        ctx.fillText('Hoop', this.target.x, this.target.y + 42);
         ctx.textAlign = 'left';
         
         // Update stats
@@ -586,49 +572,45 @@ class MechanicsSimulation {
     }
 
     drawPhasorDiagram(ctx) {
-        const phasorX = 660;
-        const phasorY = 90;
-        const phasorRadius = 55;
-        
-        // Background panel with better styling
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.97)';
-        ctx.strokeStyle = '#ddd';
-        ctx.lineWidth = 2;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
-        ctx.fillRect(phasorX - 75, phasorY - 75, 150, 190);
-        ctx.strokeRect(phasorX - 75, phasorY - 75, 150, 190);
-        ctx.shadowBlur = 0;
-        
-        // Title
-        ctx.fillStyle = '#333';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Phasor Diagram', phasorX, phasorY - 58);
-        ctx.textAlign = 'left';
+    const phasorX = 650;
+    const phasorY = 85;
+    const phasorRadius = 45;
+
+    // Background panel
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.strokeStyle = '#dcdcdc';
+    ctx.lineWidth = 1;
+    ctx.fillRect(phasorX - 65, phasorY - 65, 140, 170);
+    ctx.strokeRect(phasorX - 65, phasorY - 65, 140, 170);
+
+    ctx.fillStyle = '#333';
+    ctx.font = '11px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Phasor Sum', phasorX, phasorY - 48);
+    ctx.textAlign = 'left';
         
         // Draw circle
-        ctx.strokeStyle = '#e0e0e0';
-        ctx.lineWidth = 1;
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(phasorX, phasorY, phasorRadius, 0, Math.PI * 2);
         ctx.stroke();
         
         // Draw axes
-        ctx.strokeStyle = '#e0e0e0';
-        ctx.setLineDash([2, 2]);
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.setLineDash([2, 2]);
         ctx.beginPath();
-        ctx.moveTo(phasorX - phasorRadius - 10, phasorY);
-        ctx.lineTo(phasorX + phasorRadius + 10, phasorY);
+    ctx.moveTo(phasorX - phasorRadius - 8, phasorY);
+    ctx.lineTo(phasorX + phasorRadius + 8, phasorY);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(phasorX, phasorY - phasorRadius - 10);
-        ctx.lineTo(phasorX, phasorY + phasorRadius + 10);
+    ctx.moveTo(phasorX, phasorY - phasorRadius - 8);
+    ctx.lineTo(phasorX, phasorY + phasorRadius + 8);
         ctx.stroke();
         ctx.setLineDash([]);
         
         // Draw individual phasors (sample some to avoid clutter)
-        const sampleSize = Math.min(12, this.paths.length);
+    const sampleSize = Math.min(10, this.paths.length);
         const step = sampleSize > 0 ? Math.max(1, Math.floor(this.paths.length / sampleSize)) : 1;
         
         let re = 0, im = 0;
@@ -636,14 +618,14 @@ class MechanicsSimulation {
         if (sampleSize > 0) {
             for (let i = 0; i < this.paths.length; i += step) {
                 const path = this.paths[i];
-                const arrowLen = 12;
-                
-                ctx.strokeStyle = 'rgba(150, 150, 150, 0.3)';
+                const arrowLen = 10;
+
+                ctx.strokeStyle = 'rgba(160, 160, 160, 0.3)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(phasorX + re * 12, phasorY + im * 12);
-                ctx.lineTo(phasorX + re * 12 + arrowLen * Math.cos(path.phase), 
-                           phasorY + im * 12 + arrowLen * Math.sin(path.phase));
+                ctx.moveTo(phasorX + re * 10, phasorY + im * 10);
+                ctx.lineTo(phasorX + re * 10 + arrowLen * Math.cos(path.phase), 
+                           phasorY + im * 10 + arrowLen * Math.sin(path.phase));
                 ctx.stroke();
                 
                 re += Math.cos(path.phase);
@@ -660,42 +642,30 @@ class MechanicsSimulation {
         const sumLen = Math.hypot(re, im);
         const sumAngle = Math.atan2(im, re);
         const scale = Math.min(1, phasorRadius / (sumLen * 1.2));
-        
-        // Shadow for depth
-        ctx.strokeStyle = 'rgba(76, 175, 80, 0.2)';
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(phasorX, phasorY);
-        ctx.lineTo(phasorX + re * 12 * scale + 1, phasorY + im * 12 * scale + 1);
-        ctx.stroke();
-        
-        // Main arrow
+
         ctx.strokeStyle = '#4caf50';
-        ctx.fillStyle = '#4caf50';
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(phasorX, phasorY);
-        ctx.lineTo(phasorX + re * 12 * scale, phasorY + im * 12 * scale);
+        ctx.lineTo(phasorX + re * 10 * scale, phasorY + im * 10 * scale);
         ctx.stroke();
-        
-        // Arrowhead
-        const headLen = 10;
+
+        const headLen = 8;
         const headAngle = sumAngle;
         ctx.beginPath();
-        ctx.moveTo(phasorX + re * 12 * scale, phasorY + im * 12 * scale);
-        ctx.lineTo(phasorX + re * 12 * scale - headLen * Math.cos(headAngle - 0.4),
-                   phasorY + im * 12 * scale - headLen * Math.sin(headAngle - 0.4));
-        ctx.lineTo(phasorX + re * 12 * scale - headLen * Math.cos(headAngle + 0.4),
-                   phasorY + im * 12 * scale - headLen * Math.sin(headAngle + 0.4));
+        ctx.moveTo(phasorX + re * 10 * scale, phasorY + im * 10 * scale);
+        ctx.lineTo(phasorX + re * 10 * scale - headLen * Math.cos(headAngle - 0.35),
+                   phasorY + im * 10 * scale - headLen * Math.sin(headAngle - 0.35));
+        ctx.lineTo(phasorX + re * 10 * scale - headLen * Math.cos(headAngle + 0.35),
+                   phasorY + im * 10 * scale - headLen * Math.sin(headAngle + 0.35));
         ctx.closePath();
+        ctx.fillStyle = '#4caf50';
         ctx.fill();
-        
-        // Label below
+
         ctx.fillStyle = '#2e7d32';
-        ctx.font = '11px Arial';
+        ctx.font = '10px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('Sum', phasorX, phasorY + 80);
-        ctx.fillText(`|Σ| = ${sumLen.toFixed(1)}`, phasorX, phasorY + 95);
+        ctx.fillText(`|Σ| = ${sumLen.toFixed(1)}`, phasorX, phasorY + 70);
         ctx.textAlign = 'left';
     }
 

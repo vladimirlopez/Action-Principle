@@ -25,6 +25,19 @@ class FermatSimulation {
         this.time = 0;
         
         this.setupEventListeners();
+
+        // Maintain sharp rendering across responsive sizes
+        this.baseWidth = this.canvas.width;
+        this.baseHeight = this.canvas.height;
+        this.displayWidth = this.baseWidth;
+        this.displayHeight = this.baseHeight;
+        this.scaleX = 1;
+        this.scaleY = 1;
+        this.pixelRatio = window.devicePixelRatio || 1;
+
+        this.resizeObserver = new ResizeObserver(() => this.updateCanvasMetrics());
+        this.resizeObserver.observe(this.canvas);
+        this.updateCanvasMetrics();
     }
 
     setupEventListeners() {
@@ -50,10 +63,45 @@ class FermatSimulation {
         });
     }
 
-    onMouseDown(e) {
+    updateCanvasMetrics() {
         const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        if (!rect.width || !rect.height) {
+            return;
+        }
+
+        const dpr = window.devicePixelRatio || 1;
+        this.displayWidth = rect.width;
+        this.displayHeight = rect.height;
+        this.scaleX = rect.width / this.baseWidth;
+        this.scaleY = rect.height / this.baseHeight;
+
+        const targetWidth = Math.round(rect.width * dpr);
+        const targetHeight = Math.round(rect.height * dpr);
+
+        if (this.canvas.width !== targetWidth || this.canvas.height !== targetHeight) {
+            this.canvas.width = targetWidth;
+            this.canvas.height = targetHeight;
+        }
+
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.scale(this.scaleX * dpr, this.scaleY * dpr);
+        this.pixelRatio = dpr;
+    }
+
+    toBaseCoordinates(event) {
+        const rect = this.canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) {
+            return { x: 0, y: 0 };
+        }
+
+        return {
+            x: ((event.clientX - rect.left) * this.baseWidth) / rect.width,
+            y: ((event.clientY - rect.top) * this.baseHeight) / rect.height
+        };
+    }
+
+    onMouseDown(e) {
+        const { x, y } = this.toBaseCoordinates(e);
         
         // Check if clicking on the refraction point OR anywhere near the boundary
         const distToPoint = Math.hypot(x - this.refractionPoint.x, y - this.boundaryY);
@@ -74,17 +122,14 @@ class FermatSimulation {
 
     onMouseMove(e) {
         if (this.dragging) {
-            const rect = this.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            
+            const { x } = this.toBaseCoordinates(e);
+
             // Keep refraction point on the boundary line
             this.refractionPoint.x = Math.max(100, Math.min(700, x - this.dragOffset.x));
             this.refractionPoint.y = this.boundaryY;
         } else {
             // Show cursor feedback when hovering over boundary
-            const rect = this.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const { x, y } = this.toBaseCoordinates(e);
             const distToBoundary = Math.abs(y - this.boundaryY);
             
             if (distToBoundary < 15 && x > 100 && x < 700) {
@@ -304,30 +349,26 @@ class FermatSimulation {
 
     draw() {
         const ctx = this.ctx;
-        const width = this.canvas.width;
-        const height = this.canvas.height;
+        this.updateCanvasMetrics();
+        const width = this.baseWidth;
+        const height = this.baseHeight;
         
-        // Clear canvas with gradient
-        const gradient = ctx.createLinearGradient(0, 0, 0, height);
-        gradient.addColorStop(0, '#f0f7ff');
-        gradient.addColorStop(0.5, '#ffffff');
-        gradient.addColorStop(1, '#e3f2fd');
-        ctx.fillStyle = gradient;
+    // Clear canvas with palette-consistent colors
+    ctx.fillStyle = '#1f242a';
         ctx.fillRect(0, 0, width, height);
         
-        // Draw two media regions with better styling
-        // Medium 1 (Air) - top region
-        ctx.fillStyle = 'rgba(135, 206, 250, 0.08)';
+    // Draw two media regions using subtle accent tints
+    ctx.fillStyle = 'rgba(0, 188, 212, 0.08)';
         ctx.fillRect(0, 0, width, this.boundaryY);
         
         // Medium 2 (Water) - bottom region
-        ctx.fillStyle = 'rgba(30, 144, 255, 0.15)';
+    ctx.fillStyle = 'rgba(0, 188, 212, 0.12)';
         ctx.fillRect(0, this.boundaryY, width, height - this.boundaryY);
         
         // Draw boundary line
-        ctx.strokeStyle = '#455a64';
-        ctx.lineWidth = 2.5;
-        ctx.setLineDash([12, 6]);
+    ctx.strokeStyle = '#00bcd4';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 6]);
         ctx.beginPath();
         ctx.moveTo(0, this.boundaryY);
         ctx.lineTo(width, this.boundaryY);
@@ -335,25 +376,25 @@ class FermatSimulation {
         ctx.setLineDash([]);
         
         // Medium labels with backgrounds - no overlap
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-        ctx.fillRect(15, 15, 140, 28);
-        ctx.strokeStyle = '#ccc';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(15, 15, 140, 28);
-        
-        ctx.fillStyle = '#263238';
-        ctx.font = 'bold 15px Arial';
-        ctx.fillText(`Air (n₁ = ${this.n1.toFixed(1)})`, 22, 35);
-        
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-        ctx.fillRect(15, this.boundaryY + 10, 160, 28);
-        ctx.strokeStyle = '#ccc';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(15, this.boundaryY + 10, 160, 28);
-        
-        ctx.fillStyle = '#263238';
-        ctx.font = 'bold 15px Arial';
-        ctx.fillText(`Water (n₂ = ${this.n2.toFixed(1)})`, 22, this.boundaryY + 28);
+    ctx.fillStyle = 'rgba(32, 37, 43, 0.95)';
+    ctx.fillRect(18, 18, 158, 28);
+    ctx.strokeStyle = 'rgba(73, 80, 87, 0.9)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(18, 18, 158, 28);
+
+    ctx.fillStyle = '#e0e0e0';
+    ctx.font = '600 13px "Inter", Arial';
+    ctx.fillText(`Air (n₁ = ${this.n1.toFixed(1)})`, 28, 37);
+
+    ctx.fillStyle = 'rgba(32, 37, 43, 0.95)';
+    ctx.fillRect(18, this.boundaryY + 12, 176, 28);
+    ctx.strokeStyle = 'rgba(73, 80, 87, 0.9)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(18, this.boundaryY + 12, 176, 28);
+
+    ctx.fillStyle = '#e0e0e0';
+    ctx.font = '600 13px "Inter", Arial';
+    ctx.fillText(`Water (n₂ = ${this.n2.toFixed(1)})`, 28, this.boundaryY + 30);
         
         // Find optimal path
         const optimal = this.findOptimalRefractionPoint();
@@ -367,10 +408,10 @@ class FermatSimulation {
                 // Color based on how far from optimal
                 const timeDiff = time - optimal.time;
                 const colorIntensity = Math.min(timeDiff * 50, 1);
-                const alpha = 0.2;
-                
-                ctx.strokeStyle = `rgba(${170 + colorIntensity * 70}, ${110 - colorIntensity * 90}, ${100 - colorIntensity * 50}, ${alpha})`;
-                ctx.lineWidth = 1.3;
+                const alpha = 0.22;
+
+                ctx.strokeStyle = `rgba(0, 188, 212, ${alpha * (1 - 0.5 * colorIntensity)})`;
+                ctx.lineWidth = 1.4;
                 ctx.beginPath();
                 ctx.moveTo(this.source.x, this.source.y);
                 ctx.lineTo(testX, this.boundaryY);
@@ -383,9 +424,9 @@ class FermatSimulation {
         const optimalTime = optimal.time;
         
         // White outline first
-        ctx.strokeStyle = 'white';
-        ctx.lineWidth = 7;
-        ctx.setLineDash([10, 5]);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.lineWidth = 5;
+    ctx.setLineDash([12, 6]);
         ctx.beginPath();
         ctx.moveTo(this.source.x, this.source.y);
         ctx.lineTo(optimal.x, this.boundaryY);
@@ -394,11 +435,10 @@ class FermatSimulation {
         ctx.setLineDash([]);
         
         // Colored path on top
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = 'rgba(76, 175, 80, 0.6)';
-        ctx.strokeStyle = '#4caf50';
-        ctx.lineWidth = 3.5;
-        ctx.setLineDash([10, 5]);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#7ed957';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([12, 6]);
         ctx.beginPath();
         ctx.moveTo(this.source.x, this.source.y);
         ctx.lineTo(optimal.x, this.boundaryY);
@@ -408,13 +448,13 @@ class FermatSimulation {
         ctx.shadowBlur = 0;
         
         // Label optimal path
-        ctx.fillStyle = 'rgba(50, 200, 50, 0.95)';
-        ctx.font = 'bold 12px Arial';
-        ctx.fillText(`Optimal: ${optimalTime.toFixed(3)}ns`, optimal.x - 40, this.boundaryY - 20);
+    ctx.fillStyle = '#7ed957';
+    ctx.font = '600 11px "Inter", Arial';
+    ctx.fillText(`Optimal: ${optimalTime.toFixed(3)} ns`, optimal.x - 46, this.boundaryY - 18);
         
         // Draw current path (user-controlled)
-        ctx.strokeStyle = '#667eea';
-        ctx.lineWidth = 3;
+    ctx.strokeStyle = '#00bcd4';
+    ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.moveTo(this.source.x, this.source.y);
         ctx.lineTo(this.refractionPoint.x, this.boundaryY);
@@ -427,8 +467,8 @@ class FermatSimulation {
         }
         
         // Draw normal line at refraction point
-        ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
-        ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(224, 224, 224, 0.25)';
+    ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
         ctx.moveTo(this.refractionPoint.x, this.boundaryY - 70);
@@ -437,8 +477,8 @@ class FermatSimulation {
         ctx.setLineDash([]);
         
         // Label "Normal" at top
-        ctx.fillStyle = '#777';
-        ctx.font = '10px Arial';
+    ctx.fillStyle = '#9aa0b0';
+    ctx.font = '10px "Inter", Arial';
         ctx.textAlign = 'center';
         ctx.fillText('Normal', this.refractionPoint.x, this.boundaryY - 75);
         ctx.textAlign = 'left';

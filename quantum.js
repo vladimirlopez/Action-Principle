@@ -21,13 +21,24 @@ class QuantumSimulation {
         
         this.setupEventListeners();
         this.intensityPattern = this.calculateInterferencePattern();
+
+        this.baseWidth = this.canvas.width;
+        this.baseHeight = this.canvas.height;
+        this.displayWidth = this.baseWidth;
+        this.displayHeight = this.baseHeight;
+        this.scaleX = 1;
+        this.scaleY = 1;
+        this.pixelRatio = window.devicePixelRatio || 1;
+
+        this.resizeObserver = new ResizeObserver(() => this.updateCanvasMetrics());
+        this.resizeObserver.observe(this.canvas);
+        this.updateCanvasMetrics();
     }
 
     setupEventListeners() {
         // Mouse events for moving detector
         this.canvas.addEventListener('mousemove', (e) => {
-            const rect = this.canvas.getBoundingClientRect();
-            const y = e.clientY - rect.top;
+            const { y } = this.toBaseCoordinates(e);
             this.detectorY = Math.max(50, Math.min(550, y));
         });
 
@@ -52,6 +63,43 @@ class QuantumSimulation {
         document.getElementById('showArrows').addEventListener('change', (e) => {
             this.showArrows = e.target.checked;
         });
+    }
+
+    updateCanvasMetrics() {
+        const rect = this.canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) {
+            return;
+        }
+
+        const dpr = window.devicePixelRatio || 1;
+        this.displayWidth = rect.width;
+        this.displayHeight = rect.height;
+        this.scaleX = rect.width / this.baseWidth;
+        this.scaleY = rect.height / this.baseHeight;
+
+        const targetWidth = Math.round(rect.width * dpr);
+        const targetHeight = Math.round(rect.height * dpr);
+
+        if (this.canvas.width !== targetWidth || this.canvas.height !== targetHeight) {
+            this.canvas.width = targetWidth;
+            this.canvas.height = targetHeight;
+        }
+
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.scale(this.scaleX * dpr, this.scaleY * dpr);
+        this.pixelRatio = dpr;
+    }
+
+    toBaseCoordinates(event) {
+        const rect = this.canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) {
+            return { x: 0, y: 0 };
+        }
+
+        return {
+            x: ((event.clientX - rect.left) * this.baseWidth) / rect.width,
+            y: ((event.clientY - rect.top) * this.baseHeight) / rect.height
+        };
     }
 
     updateSlitPositions() {
@@ -143,10 +191,35 @@ class QuantumSimulation {
         }
     }
 
+    drawFloatingLabel(text, centerX, centerY, color) {
+        const ctx = this.ctx;
+        ctx.save();
+        ctx.font = '600 13px "Inter", Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const metrics = ctx.measureText(text);
+        const paddingX = 6;
+        const paddingY = 4;
+        const ascent = metrics.actualBoundingBoxAscent || 10;
+        const descent = metrics.actualBoundingBoxDescent || 4;
+        const boxWidth = metrics.width + paddingX * 2;
+        const boxHeight = ascent + descent + paddingY * 2;
+        const boxX = centerX - boxWidth / 2;
+        const boxY = centerY - boxHeight / 2;
+
+        ctx.fillStyle = 'rgba(12, 16, 21, 0.85)';
+        ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+        ctx.fillStyle = color;
+        ctx.fillText(text, centerX, centerY);
+        ctx.restore();
+    }
+
     draw() {
         const ctx = this.ctx;
-        const width = this.canvas.width;
-        const height = this.canvas.height;
+        this.updateCanvasMetrics();
+        const width = this.baseWidth;
+        const height = this.baseHeight;
         
         // Clear canvas with gradient background
         const gradient = ctx.createLinearGradient(0, 0, width, 0);
@@ -295,8 +368,8 @@ class QuantumSimulation {
         // Draw phase arrows if enabled
         if (this.showArrows) {
             const result = this.calculateAmplitude(this.detectorY);
-            const arrowBaseX = 550;
-            const arrowBaseY = 120;
+            const arrowBaseX = 430;
+            const arrowBaseY = 130;
             const arrowScale = 50;
             
             // Draw arrow diagram panel with better styling
@@ -355,16 +428,13 @@ class QuantumSimulation {
             ctx.shadowBlur = 0;
             
             // Label the individual arrows - carefully positioned
-            ctx.fillStyle = '#d32f2f';
-            ctx.font = 'bold 13px Arial';
             const labelOffset1X = 28 * Math.cos(result.phase1);
             const labelOffset1Y = 28 * Math.sin(result.phase1);
-            ctx.fillText('ψ_A', arrowBaseX + labelOffset1X - 8, arrowBaseY + labelOffset1Y - 8);
-            
-            ctx.fillStyle = '#1976d2';
+            this.drawFloatingLabel('ψ_A', arrowBaseX + labelOffset1X, arrowBaseY + labelOffset1Y, '#ff8a80');
+
             const labelOffset2X = 28 * Math.cos(result.phase2);
             const labelOffset2Y = 28 * Math.sin(result.phase2);
-            ctx.fillText('ψ_B', end1X + labelOffset2X - 8, end1Y + labelOffset2Y - 8);
+            this.drawFloatingLabel('ψ_B', end1X + labelOffset2X, end1Y + labelOffset2Y, '#82b1ff');
             
             // Draw dashed line showing resultant path
             const finalX = end1X + arrowScale * Math.cos(result.phase2);
@@ -390,11 +460,9 @@ class QuantumSimulation {
             ctx.shadowBlur = 0;
             
             // Label the sum - positioned clearly
-            ctx.fillStyle = '#2e7d32';
-            ctx.font = 'bold 13px Arial';
             const sumLabelX = totalLength * Math.cos(totalPhase) * 0.6;
             const sumLabelY = totalLength * Math.sin(totalPhase) * 0.6;
-            ctx.fillText('ψ_tot', arrowBaseX + sumLabelX - 12, arrowBaseY + sumLabelY - 10);
+            this.drawFloatingLabel('ψ_tot', arrowBaseX + sumLabelX, arrowBaseY + sumLabelY, '#7ed957');
             
             // Show intensity value below - no overlap
             ctx.fillStyle = '#37474f';
